@@ -101,7 +101,82 @@ Eigen::Matrix3d SpecularDiffuseMixReflectionLaw::evaluateReactionVectorDerivativ
                                            2.0 * specularReflectivity_ * surfaceNormal * cosineAnglePartial );
 }
 
-void SpecularDiffuseMixReflectionLaw::validateCoefficients() const
+// Solar Sail reflection law
+double SolarSailOpticalReflectionLaw::evaluateReflectedFraction(const Eigen::Vector3d& surfaceNormal,
+                                                                  const Eigen::Vector3d& incomingDirection,
+                                                                  const Eigen::Vector3d& observerDirection) const
+{
+    throw std::runtime_error(
+            "Error. This functionality is not available for the solar sail optical model.");
+}
+
+Eigen::Vector3d SolarSailOpticalReflectionLaw::evaluateReactionVector(const Eigen::Vector3d& surfaceNormal,
+                                                                      const Eigen::Vector3d& incomingDirection) const
+    { // Check the signs still though
+        double absorptivity;
+        double specularReflectivity;
+        double diffuseReflectivity;
+        double exposedLambertianCoefficient;
+
+        const double cosBetweenNormalAndIncoming = surfaceNormal.dot(-incomingDirection);
+        const double signCosBetweenNormalAndIncoming = (cosBetweenNormalAndIncoming >= 0) - (cosBetweenNormalAndIncoming <= 0);
+
+        // Depending on whether the front or the back of the sail is exposed, select appropriate optical coefficients.
+        if (cosBetweenNormalAndIncoming > 0){
+            absorptivity = frontAbsorptivity_;
+            specularReflectivity = frontSpecularReflectivity_;
+            diffuseReflectivity = frontDiffuseReflectivity_;
+            exposedLambertianCoefficient = frontNonLambertianCoefficient_;
+        } else {
+            absorptivity = backAbsorptivity_;
+            specularReflectivity = backSpecularReflectivity_;
+            diffuseReflectivity = backDiffuseReflectivity_;
+            exposedLambertianCoefficient = backNonLambertianCoefficient_;
+        }
+
+
+        double EmissionFraction = (backEmissivity_ * backNonLambertianCoefficient_ - frontEmissivity_ * frontNonLambertianCoefficient_)
+                /(frontEmissivity_ + backEmissivity_);
+        auto reactionFromAbsorptionAndReradiation = absorptivity
+                * (incomingDirection + EmissionFraction * surfaceNormal);
+        auto reactionFromSpecularReflection = -2 * specularReflectivity
+                * cosBetweenNormalAndIncoming * surfaceNormal;
+        auto reactionFromDiffuseReflection = diffuseReflectivity
+                * (incomingDirection - exposedLambertianCoefficient *  surfaceNormal * signCosBetweenNormalAndIncoming);
+
+        return reactionFromAbsorptionAndReradiation + reactionFromSpecularReflection + reactionFromDiffuseReflection;
+    }
+
+Eigen::Matrix3d SolarSailOpticalReflectionLaw::evaluateReactionVectorDerivativeWrtTargetPosition(
+            const Eigen::Vector3d& surfaceNormal,
+            const Eigen::Vector3d& incomingDirection,
+            const double cosineOfAngleBetweenVectors,
+            const Eigen::Vector3d& currentReactionVector,
+            const Eigen::Matrix3d& sourceUnitVectorPartial,
+            const Eigen::Matrix< double, 1, 3 >& cosineAnglePartial )
+    {
+        throw std::runtime_error(
+                "Error. This functionality has not yet been implemented.");
+    }
+
+    void SolarSailOpticalReflectionLaw::validateCoefficients() const
+    {
+        auto sumOfCoeffsFront = frontAbsorptivity_ + frontSpecularReflectivity_ + frontDiffuseReflectivity_;
+        auto sumOfCoeffsBack = backAbsorptivity_ + backSpecularReflectivity_ + backDiffuseReflectivity_;
+        if (std::fabs(1 - sumOfCoeffsFront) >= 20 * std::numeric_limits<double>::epsilon() ||
+        std::fabs(1 - sumOfCoeffsBack) >= 20 * std::numeric_limits<double>::epsilon())
+        {
+            std::cerr << "Warning, coefficients of optical solar sail reflection law, " <<
+                      "should sum to 1" << sumOfCoeffsFront << sumOfCoeffsBack << std::endl;
+        }else if (backEmissivity_> 1 || frontEmissivity_> 1){
+            std::cerr << "Warning, the emissivity coefficients of the solar sail reflection law, " <<
+                      "should have a value between 0 and 1" << std::endl;
+        }else if (backNonLambertianCoefficient_ > 1 || frontNonLambertianCoefficient_ > 1){
+            std::cerr << "Warning, the Lambertian coefficients of the solar sail reflection law, " <<
+                      "should have a value between 0 and 1" << std::endl;
+        }
+    }
+    void SpecularDiffuseMixReflectionLaw::validateCoefficients() const
 {
     auto sumOfCoeffs = absorptivity_ + specularReflectivity_ + diffuseReflectivity_;
     if (std::fabs(1 - sumOfCoeffs) >= 20 * std::numeric_limits<double>::epsilon())

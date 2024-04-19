@@ -45,8 +45,29 @@ std::shared_ptr< electromagnetism::ReflectionLaw > createReflectionLaw(
             specularDiffuseReflectionLawSettings->withInstantaneousReradiation_ );
         break;
     }
+        case solar_sail_optical_reflection_law:
+    {
+        std::shared_ptr< SolarSailOpticalBodyPanelReflectionLawSettings > solarSailOpticalReflectionLawSettings =
+                std::dynamic_pointer_cast< SolarSailOpticalBodyPanelReflectionLawSettings >( reflectionLawSettings );
+        if( solarSailOpticalReflectionLawSettings == nullptr )
+        {
+            throw std::runtime_error( "Error when creating solar sail optical reflection law; settings are incompatible" );
+        }
+        reflectionLaw = std::make_shared< electromagnetism::SolarSailOpticalReflectionLaw >(
+                solarSailOpticalReflectionLawSettings->frontAbsorptivity_,
+                solarSailOpticalReflectionLawSettings->backAbsorptivity_,
+                solarSailOpticalReflectionLawSettings->frontSpecularReflectivity_,
+                solarSailOpticalReflectionLawSettings->backSpecularReflectivity_,
+                solarSailOpticalReflectionLawSettings->frontDiffuseReflectivity_,
+                solarSailOpticalReflectionLawSettings->backDiffuseReflectivity_,
+                solarSailOpticalReflectionLawSettings->frontNonLambertianCoefficient_,
+                solarSailOpticalReflectionLawSettings->backNonLambertianCoefficient_,
+                solarSailOpticalReflectionLawSettings->frontEmissivity_,
+                solarSailOpticalReflectionLawSettings->backEmissivity_);
+        break;
+    }
     default:
-        throw std::runtime_error( "Error when creating panel reflection law; type not recognzied " +
+        throw std::runtime_error( "Error when creating panel reflection law; type not recognized " +
                                   std::to_string( static_cast< int>( reflectionLawSettings->bodyPanelReflectionLawType_ ) ) );
     }
     return reflectionLaw;

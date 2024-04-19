@@ -240,6 +240,35 @@ BOOST_AUTO_TEST_CASE( testLambertian_Reaction )
     TUDAT_CHECK_MATRIX_CLOSE(actualReaction, expectedReaction, 1e-15);
 }
 
+BOOST_AUTO_TEST_CASE(testSolarSailOpticalModel_Reaction)
+{
+    // Test of solar sail optical model for the front side
+    SolarSailOpticalReflectionLaw reflectionLawFrontTest(0.2,
+                                                0.5,
+                                                0.7,
+                                                0.2,
+                                                0.1,
+                                                0.3,
+                                                0.55,
+                                                0.79,
+                                                0.3, 0.92);
+
+    auto expectedReaction = Vector(-0.1775285417690227, -0.1775285417690227, -0.9679706781275602).normalized();
+    auto normal = Vector(0, 0, 1).normalized();
+    auto incomingDirection = Vector(-1, -1, -1).normalized();
+    auto actualReaction = reflectionLawFrontTest.evaluateReactionVector(normal, incomingDirection).normalized();
+    TUDAT_CHECK_MATRIX_CLOSE(actualReaction, expectedReaction, 1e-15);
+
+    // Test of solar sail optical model for the back side
+    expectedReaction = Vector(0.3469333106100862, 0.3469333106100862, 0.8713636186909866).normalized();
+    normal = Vector(0, 0, 1).normalized();
+    incomingDirection = Vector(1, 1, 1).normalized();
+    actualReaction = reflectionLawFrontTest.evaluateReactionVector(normal, incomingDirection).normalized();
+    TUDAT_CHECK_MATRIX_CLOSE(actualReaction, expectedReaction, 1e-15);
+
+    // If the sail is edge on, the direction obtained does not mean anything but the magnitude of the force computed from
+    // PaneledRadiationPressureTargetModel::evaluateRadiationPressureForce will be zero
+}
 
 BOOST_AUTO_TEST_SUITE_END()
 

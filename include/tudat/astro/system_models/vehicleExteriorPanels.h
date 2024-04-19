@@ -76,7 +76,8 @@ public:
         VehicleExteriorPanel(
         const double panelArea,
         const Eigen::Vector3d& frameFixedSurfaceNormal,
-        const std::shared_ptr< electromagnetism::ReflectionLaw > reflectionLaw = nullptr ):
+        const std::shared_ptr< electromagnetism::ReflectionLaw > reflectionLaw = nullptr,
+        const Eigen::Vector3d& frameFixedPositionVector=Eigen::Vector3d::Zero()):
         frameFixedSurfaceNormal_( [=]( ){ return frameFixedSurfaceNormal; } ),
         frameFixedPositionVector_( [=]( ){ return Eigen::Vector3d::Constant( TUDAT_NAN ); } ),
         panelArea_( panelArea ),
@@ -101,11 +102,23 @@ public:
         const std::function< Eigen::Vector3d( ) > frameFixedSurfaceNormal,
         const double panelArea,
         const std::string trackedBody = "",
-        const std::shared_ptr< electromagnetism::ReflectionLaw > reflectionLaw = nullptr ):
+        const std::shared_ptr< electromagnetism::ReflectionLaw > reflectionLaw = nullptr):
         frameFixedSurfaceNormal_( frameFixedSurfaceNormal ),
         panelArea_( panelArea ),
         trackedBody_( trackedBody ),
         reflectionLaw_( reflectionLaw ){ }
+
+    VehicleExteriorPanel(
+            const std::function< Eigen::Vector3d( ) > frameFixedSurfaceNormal,
+            const double panelArea,
+            const std::function< Eigen::Vector3d( ) > frameFixedPositionVector,
+            const std::string trackedBody = "",
+            const std::shared_ptr< electromagnetism::ReflectionLaw > reflectionLaw = nullptr):
+            frameFixedSurfaceNormal_( frameFixedSurfaceNormal ),
+            frameFixedPositionVector_( frameFixedPositionVector ),
+            panelArea_( panelArea ),
+            trackedBody_( trackedBody ),
+            reflectionLaw_( reflectionLaw ){ }
 
     void setReflectionLaw( const std::shared_ptr< electromagnetism::ReflectionLaw > reflectionLaw )
     {
@@ -150,7 +163,6 @@ public:
 protected:
 
     std::function< Eigen::Vector3d( ) > frameFixedSurfaceNormal_;
-
     std::function< Eigen::Vector3d( ) > frameFixedPositionVector_;
 
     double panelArea_;

@@ -145,7 +145,8 @@ private:
 
 enum BodyPanelReflectionLawType
 {
-    specular_diffuse_reflection_law
+    specular_diffuse_reflection_law,
+    solar_sail_optical_reflection_law
 };
 
 class BodyPanelReflectionLawSettings
@@ -202,6 +203,68 @@ inline std::shared_ptr< BodyPanelReflectionLawSettings > lambertainBodyPanelRefl
     return std::make_shared< SpecularDiffuseBodyPanelReflectionLawSettings>(
         0.0, reflectivity, false );
 }
+
+class SolarSailOpticalBodyPanelReflectionLawSettings: public BodyPanelReflectionLawSettings
+{
+public:
+
+    SolarSailOpticalBodyPanelReflectionLawSettings(
+            const double frontAbsorptivity,
+            const double backAbsorptivity,
+            const double frontSpecularReflectivity,
+            const double backSpecularReflectivity,
+            const double frontDiffuseReflectivity,
+            const double backDiffuseReflectivity,
+            const double frontNonLambertianCoefficient,
+            const double backNonLambertianCoefficient,
+            const double frontEmissivity,
+            const double backEmissivity):
+            BodyPanelReflectionLawSettings( solar_sail_optical_reflection_law ),
+            frontAbsorptivity_(frontAbsorptivity),
+            backAbsorptivity_(backAbsorptivity),
+            frontSpecularReflectivity_(frontSpecularReflectivity),
+            backSpecularReflectivity_(backSpecularReflectivity),
+            frontDiffuseReflectivity_(frontDiffuseReflectivity),
+            backDiffuseReflectivity_(backDiffuseReflectivity),
+            frontNonLambertianCoefficient_(frontNonLambertianCoefficient),
+            backNonLambertianCoefficient_(backNonLambertianCoefficient),
+            frontEmissivity_(frontEmissivity),
+            backEmissivity_(backEmissivity)
+
+    {}
+
+    ~SolarSailOpticalBodyPanelReflectionLawSettings( ){ }
+
+    double frontAbsorptivity_;
+    double backAbsorptivity_;
+    double frontSpecularReflectivity_;
+    double backSpecularReflectivity_;
+    double frontDiffuseReflectivity_;
+    double backDiffuseReflectivity_;
+    double frontNonLambertianCoefficient_;
+    double backNonLambertianCoefficient_;
+    double frontEmissivity_;
+    double backEmissivity_;
+};
+
+inline std::shared_ptr< BodyPanelReflectionLawSettings > solarSailOpticalBodyPanelReflectionLawSettings(
+        const double frontAbsorptivity,
+        const double backAbsorptivity,
+        const double frontSpecularReflectivity,
+        const double backSpecularReflectivity,
+        const double frontDiffuseReflectivity,
+        const double backDiffuseReflectivity,
+        const double frontNonLambertianCoefficient,
+        const double backNonLambertianCoefficient,
+        const double frontEmissivity,
+        const double backEmissivity)
+{
+    return std::make_shared< SolarSailOpticalBodyPanelReflectionLawSettings>(
+            frontAbsorptivity, backAbsorptivity, frontSpecularReflectivity, backSpecularReflectivity,
+            frontDiffuseReflectivity, backDiffuseReflectivity, frontNonLambertianCoefficient,
+            backNonLambertianCoefficient, frontEmissivity, backEmissivity );
+}
+
 
 std::shared_ptr< electromagnetism::ReflectionLaw > createReflectionLaw(
     const std::shared_ptr<BodyPanelReflectionLawSettings> modelSettings );

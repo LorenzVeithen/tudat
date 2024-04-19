@@ -1279,6 +1279,675 @@ BOOST_AUTO_TEST_CASE( testRadiationPressureAcceleration_DynamicallyPaneledSource
     }
 }
 
+//! Test basic cases for paneled target acceleration with isotropic point source
+BOOST_AUTO_TEST_CASE( testRadiationPressureAcceleration_IsotropicPointSource_PaneledTarget_SolarSailReflection_Basic )
+{
+    // Set distance to speed of light to cancel to unity radiation pressure
+    auto luminosityModel = std::make_shared<ConstantLuminosityModel>(
+            computeLuminosityFromIrradiance( physical_constants::SPEED_OF_LIGHT, 1.0 ) );
+    auto sourceModel = std::make_shared<IsotropicPointRadiationSourceModel>(luminosityModel);
+
+    // Test different combinations of optical parameters. Front and back side kept the same
+    {
+        // 1: Only one panel towards source, only absorption and emission is equal on both sides
+            // Magnitude 1 because area 1 and only absorption
+        // 2: Only one panel towards source, only absorption and emission is equal on both sides
+            // Magnitude 1+2/3 because area 1, and absorption then reemission on the same side through Lambertian law
+        // 3: Only one panel towards source, only absorption and emission is equal on both sides
+            // Magnitude 1 + 2/3 because area 1, and absorption then reemission on the opposite side of the sail through Lambertian re-emission
+        // 4: Only one panel towards source, only specular reflection
+            // Magnitude 2 because area 1, and specular reflection
+        // 5: Only one panel towards source, only diffuse reflection
+            // Magnitude (1 + 2./3), because only diffuse reflection (incident momentum, then reflection in same direction)
+        double expectedAccelerationFactorArrayFront[5]{1., (1. + 2./3), (1 - 2./3) , 2 , (1 + 2./3)};
+        double expectedAccelerationFactorArrayBack[5]{1., (1. - 2./3),(1 + 2./3), 2,(1 + 2./3)};
+
+        double absorptivityArray[5]{1, 1, 1, 0, 0};
+        double specularReflectivityArray[5]{0, 0, 0, 1, 0};
+        double diffuseReflectivityArray[5]{0, 0, 0, 0, 1};
+        double frontEmissivityArray[5]{0.55, 1, 0, 1, 1};
+        double backEmissivityArray[5]{0.55, 0, 1, 1, 1};
+        for(unsigned int j=1; j < 3; j++ ){ // First sail front, then sail back, should see no difference between the two except for the emissivities defined with respect to the surface rather than the source
+            auto expectedAccelerationFactorArray = ((j==1) ? expectedAccelerationFactorArrayFront : expectedAccelerationFactorArrayBack);
+            for(unsigned int i = 0; i < 5; i++ ){ // Loop through optical parameters
+
+                // Change the panel each time
+                std::vector< std::shared_ptr< system_models::VehicleExteriorPanel > > panels{
+                        std::make_shared< system_models::VehicleExteriorPanel >(1, pow(-1, j) * Eigen::Vector3d::UnitX(),
+                                                                                std::make_shared<SolarSailOpticalReflectionLaw>(absorptivityArray[i],
+                                                                                                                                absorptivityArray[i],
+                                                                                                                                specularReflectivityArray[i],
+                                                                                                                                specularReflectivityArray[i],
+                                                                                                                                diffuseReflectivityArray[i],
+                                                                                                                                diffuseReflectivityArray[i],
+                                                                                                                                2./3.,
+                                                                                                                                2./3.,
+                                                                                                                                frontEmissivityArray[i],
+                                                                                                                                backEmissivityArray[i]))
+                };
+                auto targetModel = std::make_shared<PaneledRadiationPressureTargetModel>(panels);
+                IsotropicPointSourceRadiationPressureAcceleration accelerationModel(
+                        sourceModel,
+                        std::make_shared<basic_astrodynamics::SphericalBodyShapeModel>(1),
+                        [] () { return Eigen::Vector3d::Zero(); },
+                        targetModel,
+                        [] () { return Eigen::Vector3d::UnitX(); },
+                        [] () { return Eigen::Quaterniond::Identity(); },
+                        [] () { return 1; },
+                        std::make_shared<NoOccultingBodyOccultationModel>());
+
+                sourceModel->updateMembers(TUDAT_NAN);
+                targetModel->updateMembers(TUDAT_NAN);
+                accelerationModel.updateMembers(TUDAT_NAN);
+
+                auto actualAcceleration = accelerationModel.getAcceleration();
+                auto expectedAcceleration = expectedAccelerationFactorArray[i] * Eigen::Vector3d::UnitX();
+                TUDAT_CHECK_MATRIX_CLOSE_FRACTION(expectedAcceleration, actualAcceleration, 1e-15);
+            }
+        }
+    }
+
+    // Test different orientations of the source with respect to the panels
+    {
+        // Create 2 panels pointing in two different directions
+        std::vector< std::shared_ptr< system_models::VehicleExteriorPanel > > panels{
+                std::make_shared< system_models::VehicleExteriorPanel > (1, -Eigen::Vector3d::UnitX(),
+                std::make_shared<SolarSailOpticalReflectionLaw>(0.1,
+                                                                0.35,
+                                                                0.7,
+                                                                0.5,
+                                                                0.2,
+                                                                0.15,
+                                                                2./3.,
+                                                                2./3.,
+                                                                0.15,
+                                                                0.95)),
+                std::make_shared< system_models::VehicleExteriorPanel > (2, Eigen::Vector3d::UnitY(),
+                std::make_shared<SolarSailOpticalReflectionLaw>(0.1,
+                                                                0.35,
+                                                                0.7,
+                                                                0.5,
+                                                                0.2,
+                                                                0.15,
+                                                                2./3.,
+                                                                2./3.,
+                                                                0.15,
+                                                                0.95))
+        };
+        auto targetModel = std::make_shared<PaneledRadiationPressureTargetModel>(panels);
+
+
+        // 1: Only panel 1 is directly exposed along the X-axis
+        // 2: Only panel 2 is directly exposed along the X-axis but from the back of the sail
+        // 3: Both panel 1 and 2 exposed at 45 degrees with respect to the source
+        Eigen::Vector3d expectedAccelerationDueToPanel1Case1 = 0.1 * Eigen::Vector3d::UnitX()
+                                                            + 0.1 * (0.95 * (2./3.) - 0.15 * 2./3.)/(0.15 + 0.95) * (-Eigen::Vector3d::UnitX())
+                                                            - 2 * 0.7 * 1 * (-Eigen::Vector3d::UnitX())
+                                                            + 0.2 * ((Eigen::Vector3d::UnitX()) - 2./3. * (-Eigen::Vector3d::UnitX()));
+
+        Eigen::Vector3d expectedAccelerationDueToPanel2Case2 = (0.35 * Eigen::Vector3d::UnitX()
+                                                            + 0.35 * (0.95 * (2./3.) - 0.15 * 2./3.)/(0.15 + 0.95) * (Eigen::Vector3d::UnitX())
+                                                            - 2 * 0.5 * (-1) * Eigen::Vector3d::UnitX()
+                                                            + 0.15 * (Eigen::Vector3d::UnitX() + (2./3.) * Eigen::Vector3d::UnitX())) * 2; // * 2 factor to account for the area
+
+        Eigen::Vector3d expectedAccelerationDueToPanel1Case3 = (0.1 * Eigen::Vector3d::UnitX()
+                                                           + 0.1 * (0.95 * (2./3.) - 0.15 * 2./3.)/(0.15 + 0.95) * Eigen::Vector3d(-1, 1, 0).normalized()
+                                                           - 2 * 0.7 * (1/sqrt(2)) * Eigen::Vector3d(-1, 1, 0).normalized()
+                                                           + 0.2 * ((Eigen::Vector3d::UnitX()) - 2./3. * Eigen::Vector3d(-1, 1, 0).normalized())) * (1/sqrt(2));
+
+        Eigen::Vector3d expectedAccelerationDueToPanel2Case3 = (0.35 * Eigen::Vector3d::UnitX()
+                                                           + 0.35 * (0.95 * (2./3.) - 0.15 * 2./3.)/(0.15 + 0.95) * Eigen::Vector3d(1, 1, 0).normalized()
+                                                           - 2 * 0.5 * (-1/sqrt(2)) * Eigen::Vector3d(1, 1, 0).normalized()
+                                                           + 0.15 * (Eigen::Vector3d::UnitX() + (2./3.) * Eigen::Vector3d(1, 1, 0).normalized())) * (2/sqrt(2));
+
+        const Eigen::Vector3d expectedAccelerationDueToPanel1[3]{expectedAccelerationDueToPanel1Case1, Eigen::Vector3d::Zero(), expectedAccelerationDueToPanel1Case3};
+        // Panel 2 due to diffuse reflection (effective area is 2/√2)
+        const Eigen::Vector3d expectedAccelerationDueToPanel2[3]{Eigen::Vector3d::Zero(), expectedAccelerationDueToPanel2Case2, expectedAccelerationDueToPanel2Case3} ;
+        const double rotationAngle[3]{0., 90., 45.};
+
+        // Consider multiple orientations
+        for (unsigned int i=0; i < 3; i++){
+            Eigen::Vector3d expectedAcceleration = expectedAccelerationDueToPanel1[i] + expectedAccelerationDueToPanel2[i];
+            IsotropicPointSourceRadiationPressureAcceleration accelerationModel(
+                    sourceModel,
+                    std::make_shared<basic_astrodynamics::SphericalBodyShapeModel>(1),
+                    [] () { return Eigen::Vector3d::Zero(); },
+                    targetModel,
+                    [] () { return Eigen::Vector3d::UnitX(); },
+                    [rotationAngle, i] () {
+                        const auto angle = unit_conversions::convertDegreesToRadians(-rotationAngle[i]);
+                        return Eigen::Quaterniond(Eigen::AngleAxisd(angle, Eigen::Vector3d::UnitZ()));
+                    },
+                    [] () { return 1; },
+                    std::make_shared<NoOccultingBodyOccultationModel>());
+            sourceModel->updateMembers(TUDAT_NAN);
+            targetModel->updateMembers(TUDAT_NAN);
+            accelerationModel.updateMembers(TUDAT_NAN);
+
+            auto actualAcceleration = accelerationModel.getAcceleration();
+            for (unsigned int k =0; k < 3; k++) {
+                BOOST_CHECK_SMALL(std::fabs(expectedAcceleration[k]-actualAcceleration[k]), 1e-15);
+            }
+        }
+    }
+}
+
+//! Test radiation acceleration model for a paneled spacecraft in various orbits with respect to the Sun.
+BOOST_AUTO_TEST_CASE( testRadiationPressureAcceleration_IsotropicPointSource_PaneledTarget_SolarSailReflection_Realistic )
+{
+    // Box-and-wings model is partially obtained from Oliver Montenbruck, et al.
+    //     "Semi-analytical solar radiation pressure modeling for QZS-1 orbit-normal and yaw-steering attitude".
+    //     Advances in Space Research 59. 8(2017): 2088–2100.
+
+    using namespace tudat::basic_astrodynamics;
+    using namespace tudat::simulation_setup;
+    using namespace tudat::ephemerides;
+
+    //Load spice kernels.
+    spice_interface::loadStandardSpiceKernels( );
+
+    // Create bodies needed in simulation
+    double initialEphemerisTime = 0.0;
+    double finalEphemerisTime = 1.1 * 365.25 * 86400.0;
+    SystemOfBodies bodies = createSystemOfBodies(
+            getDefaultBodySettings( std::vector<std::string>{"Sun"}, initialEphemerisTime, finalEphemerisTime, "Sun" ) );
+    auto radiationSourceModel =
+            std::dynamic_pointer_cast<IsotropicPointRadiationSourceModel>(bodies.at("Sun")->getRadiationSourceModel());
+
+    // Create vehicle
+    bodies.createEmptyBody( "Vehicle" );
+    bodies.at( "Vehicle" )->setConstantBodyMass( 20.0 );
+
+    for ( int testCase = 0 ; testCase < 4 ; testCase++)
+    {
+        double inclination{};
+        if ( testCase == 0 || testCase == 3 )
+        {
+            // Put vehicle on circular orbit around the Sun with i = 0 deg
+            inclination = 0.0;
+        }
+        else if ( testCase == 1 )
+        {
+            // Put vehicle in circular orbit around the Sun with i = 90 deg
+            inclination = 90.0;
+        }
+        else if ( testCase == 2 )
+        {
+            // Put vehicle in circular orbit around the Sun with arbitrary chosen inclination
+            inclination = 20.0;
+        }
+
+        Eigen::Vector6d initialStateInKeplerianElements = Eigen::Vector6d::Zero( );
+        initialStateInKeplerianElements[ orbital_element_conversions::semiMajorAxisIndex ] = physical_constants::ASTRONOMICAL_UNIT;
+        initialStateInKeplerianElements[ orbital_element_conversions::inclinationIndex ] = unit_conversions::convertDegreesToRadians( inclination );
+        bodies.at( "Vehicle" )->setEphemeris(
+                std::make_shared< KeplerEphemeris >( initialStateInKeplerianElements, 0.0,
+                                                     spice_interface::getBodyGravitationalParameter( "Sun" ), "Sun", "ECLIPJ2000") );
+
+        auto orbitalPeriod = computeKeplerOrbitalPeriod(
+                physical_constants::ASTRONOMICAL_UNIT,
+                spice_interface::getBodyGravitationalParameter( "Sun" ));
+
+        // Set-up rotational ephemeris for vehicle.
+        if ( testCase < 3 ){
+            // Define constant rotational model.
+            Eigen::Vector7d rotationalStateVehicle;
+            rotationalStateVehicle.segment( 0, 4 ) = linear_algebra::convertQuaternionToVectorFormat(Eigen::Quaterniond::Identity());
+            bodies.at( "Vehicle" )->setRotationalEphemeris(
+                    std::make_shared< ConstantRotationalEphemeris >( rotationalStateVehicle, "ECLIPJ2000", "VehicleFixed" ));
+        }
+        else if ( testCase == 3 )
+        {
+            // Define simple rotational model.
+            bodies.at( "Vehicle" )->setRotationalEphemeris(
+                    std::make_shared< tudat::ephemerides::SimpleRotationalEphemeris >(
+                            0.2, 0.4, -0.2, 1.0E-5, 0.0, "ECLIPJ2000", "VehicleFixed" ) );
+        }
+        bodies.processBodyFrameDefinitions( );
+
+
+        std::vector< std::shared_ptr< system_models::VehicleExteriorPanel > > panels;
+        if ( testCase == 0 || testCase == 1 || testCase == 2 )
+        {
+            // Define panels properties for test cases with constant rotational model.
+            panels = {
+                    std::make_shared< system_models::VehicleExteriorPanel >(3.0, Eigen::Vector3d::UnitX(),
+                                                                            std::make_shared<SolarSailOpticalReflectionLaw>(0.5,
+                                                                                                                            0.4,
+                                                                                                                            0.4,
+                                                                                                                            0.3,
+                                                                                                                            0.1,
+                                                                                                                            0.3,
+                                                                                                                            0.4,
+                                                                                                                            2./3.,
+                                                                                                                            0.55,
+                                                                                                                            0.95)),
+                    std::make_shared< system_models::VehicleExteriorPanel >(4.0, -Eigen::Vector3d::UnitX(),
+                                                                            std::make_shared<SolarSailOpticalReflectionLaw>(0.4,
+                                                                                                                            0.3,
+                                                                                                                            0.3,
+                                                                                                                            0.3,
+                                                                                                                            0.3,
+                                                                                                                            0.4,
+                                                                                                                            0.55,
+                                                                                                                            0.67,
+                                                                                                                            0.15,
+                                                                                                                            0.45)),
+                    std::make_shared< system_models::VehicleExteriorPanel >(5.0, Eigen::Vector3d::UnitY(),
+                                                                            std::make_shared<SolarSailOpticalReflectionLaw>(0.5,
+                                                                                                                            0.2,
+                                                                                                                            0.2,
+                                                                                                                            0.3,
+                                                                                                                            0.3,
+                                                                                                                            0.5,
+                                                                                                                            0.34,
+                                                                                                                            0.78,
+                                                                                                                            0.45,
+                                                                                                                            0.76)),
+                    std::make_shared< system_models::VehicleExteriorPanel >(6.0, -Eigen::Vector3d::UnitY(),
+                                                                            std::make_shared<SolarSailOpticalReflectionLaw>(0.6,
+                                                                                                                            0.1,
+                                                                                                                            0.1,
+                                                                                                                            0.3,
+                                                                                                                            0.3,
+                                                                                                                            0.6,
+                                                                                                                            0.56,
+                                                                                                                            2./3.,
+                                                                                                                            0.5,
+                                                                                                                            0.5)),
+                    std::make_shared< system_models::VehicleExteriorPanel >(1.0, Eigen::Vector3d::UnitZ(),
+                                                                            std::make_shared<SolarSailOpticalReflectionLaw>(0.1,
+                                                                                                                            0.6,
+                                                                                                                            0.6,
+                                                                                                                            0.3,
+                                                                                                                            0.3,
+                                                                                                                            0.1,
+                                                                                                                            0.6,
+                                                                                                                            0.89,
+                                                                                                                            1.0,
+                                                                                                                            0.95)),
+                    std::make_shared< system_models::VehicleExteriorPanel >(2.0, -Eigen::Vector3d::UnitZ(),
+                                                                            std::make_shared<SolarSailOpticalReflectionLaw>(0.2,
+                                                                                                                            0.5,
+                                                                                                                            0.5,
+                                                                                                                            0.3,
+                                                                                                                            0.3,
+                                                                                                                            0.2,
+                                                                                                                            2./3.,
+                                                                                                                            0.7,
+                                                                                                                            0.15,
+                                                                                                                            0.05))
+            };
+        }
+        else if ( testCase == 3 )
+        {
+            // Define panels properties for test cases with simple rotational model (simpler boxes-and-wings model).
+            panels = {
+                    std::make_shared< system_models::VehicleExteriorPanel >(9.9, Eigen::Vector3d::UnitX(),
+                                                                            std::make_shared<SolarSailOpticalReflectionLaw>(0.1,
+                                                                                                                            0.35,
+                                                                                                                            0.7,
+                                                                                                                            0.5,
+                                                                                                                            0.2,
+                                                                                                                            0.15,
+                                                                                                                            2./3.,
+                                                                                                                            2./3.,
+                                                                                                                            0.15,
+                                                                                                                            0.95)),
+                    std::make_shared< system_models::VehicleExteriorPanel >(2.3, Eigen::Vector3d::UnitX(),
+                                                                            std::make_shared<SolarSailOpticalReflectionLaw>(0.6,
+                                                                                                                            0.1,
+                                                                                                                            0.1,
+                                                                                                                            0.3,
+                                                                                                                            0.3,
+                                                                                                                            0.6,
+                                                                                                                            0.56,
+                                                                                                                            2./3.,
+                                                                                                                            0.5,
+                                                                                                                            0.5)),
+                    std::make_shared< system_models::VehicleExteriorPanel >(9.9, -Eigen::Vector3d::UnitX(),std::make_shared<SolarSailOpticalReflectionLaw>(0.1,
+                                                                                                                                                           0.35,
+                                                                                                                                                           0.7,
+                                                                                                                                                           0.5,
+                                                                                                                                                           0.2,
+                                                                                                                                                           0.15,
+                                                                                                                                                           2./3.,
+                                                                                                                                                           2./3.,
+                                                                                                                                                           0.15,
+                                                                                                                                                           0.95)),
+                    std::make_shared< system_models::VehicleExteriorPanel >(2.3, -Eigen::Vector3d::UnitX(),
+                                                                            std::make_shared<SolarSailOpticalReflectionLaw>(0.6,
+                                                                                                                            0.1,
+                                                                                                                            0.1,
+                                                                                                                            0.3,
+                                                                                                                            0.3,
+                                                                                                                            0.6,
+                                                                                                                            0.56,
+                                                                                                                            2./3.,
+                                                                                                                            0.5,
+                                                                                                                            0.5)),
+
+            };
+        }
+        bodies.at( "Vehicle" )->setRadiationPressureTargetModel(
+                std::make_shared<PaneledRadiationPressureTargetModel>(panels));
+
+        std::vector< double > areas;
+        std::vector< Eigen::Vector3d > panelSurfaceNormals;
+        std::vector< double > frontAbsorptivities;
+        std::vector< double > backAbsorptivities;
+        std::vector< double > frontSpecularReflectivities;
+        std::vector< double > backSpecularReflectivities;
+        std::vector< double > frontDiffuseReflectivities;
+        std::vector< double > backDiffuseReflectivities;
+        std::vector< double > frontEmissivities;
+        std::vector< double > backEmissivities;
+        std::vector< double > frontNonLambertianCoefficients;
+        std::vector< double > backNonLambertianCoefficients;
+        for (auto& panel : panels)
+        {
+            areas.push_back(panel->getPanelArea());
+            panelSurfaceNormals.push_back(panel->getFrameFixedSurfaceNormal( )( ) );
+            auto reflectionLaw = std::dynamic_pointer_cast<SolarSailOpticalReflectionLaw>(panel->getReflectionLaw());
+            frontAbsorptivities.push_back(reflectionLaw->getFrontAbsorptivity());
+            backAbsorptivities.push_back(reflectionLaw->getBackAbsorptivity());
+            frontSpecularReflectivities.push_back(reflectionLaw->getFrontSpecularReflectivity());
+            backSpecularReflectivities.push_back(reflectionLaw->getBackSpecularReflectivity());
+            frontDiffuseReflectivities.push_back(reflectionLaw->getFrontDiffuseReflectivity());
+            backDiffuseReflectivities.push_back(reflectionLaw->getBackDiffuseReflectivity());
+            frontEmissivities.push_back(reflectionLaw->getFrontEmissivity());
+            backEmissivities.push_back(reflectionLaw->getBackEmissivity());
+            frontNonLambertianCoefficients.push_back(reflectionLaw->getFrontNonLambertianCoefficient());
+            backNonLambertianCoefficients.push_back(reflectionLaw->getBackNonLambertianCoefficient());
+        }
+
+
+        SelectedAccelerationMap accelerationMap {
+                {"Vehicle", {
+                        {"Sun", {
+                                radiationPressureAcceleration()
+                        }},
+                }}
+        };
+        auto accelerationModelMap = createAccelerationModelsMap(bodies,
+                                                                accelerationMap,
+                                                                std::vector<std::string>{"Vehicle"},
+                                                                std::vector<std::string>{"Sun"});
+        auto accelerationModel = accelerationModelMap.at( "Vehicle" ).at( "Sun" ).at( 0 );
+
+
+        std::vector< double > testTimes{ 0.0, orbitalPeriod / 4.0, orbitalPeriod / 2.0, 3.0 / 4.0 * orbitalPeriod };
+
+
+        // Compute panelled radiation pressure for various relative Sun positions.
+        Eigen::Vector3d calculatedAcceleration, expectedAcceleration;
+
+        for( unsigned int i = 0; i < testTimes.size( ) ; i++ )
+        {
+            // Update environment and acceleration
+            bodies.at( "Sun" )->setStateFromEphemeris( testTimes[ i ] );
+            bodies.at( "Vehicle" )->setStateFromEphemeris( testTimes[ i ] );
+            // Round vehicle state such that position vector only has a single non-zero component
+            // This should physically be the case for the given test times, but the Kepler ephemeris returns small
+            // non-zero values for other position components as well, leading to discrepancies between the simplified
+            // panel accelerations calculated here (only considering the two pointing towards the sun) and
+            // those calculated considering all panels in the tested class
+            bodies.at( "Vehicle" )->setState(bodies.at( "Vehicle" )->getState().array().round());
+            bodies.at( "Vehicle" )->setCurrentRotationToLocalFrameFromEphemeris( testTimes[ i ] );
+
+            bodies.at( "Sun" )->getRadiationSourceModel()->updateMembers( testTimes[ i ] );
+            bodies.at( "Vehicle" )->getRadiationPressureTargetModel()->updateMembers( testTimes[ i ] );
+            accelerationModel->updateMembers( testTimes[ i ] );
+
+            // Retrieve acceleration.
+            calculatedAcceleration = accelerationModel->getAcceleration( );
+
+            Eigen::Vector3d expectedVehicleToSunVector =
+                    bodies.at( "Sun" )->getPosition() - bodies.at( "Vehicle" )->getPosition();
+            Eigen::Vector3d expectedVehicleToSunVectorNormalized = expectedVehicleToSunVector.normalized();
+
+            auto sourceIrradiance =
+                    radiationSourceModel->evaluateIrradianceAtPosition(bodies.at( "Vehicle" )->getPosition()).front().first;
+            auto radiationPressure = sourceIrradiance / physical_constants::SPEED_OF_LIGHT;
+
+            // Calculated accelerations.
+
+            // Calculated acceleration if Sun-Vehicle vector aligned with +X-axis (acceleration generated by panels whose normals are
+            // along +X-axis only)
+            double cosPanelInclinationPositiveXaxis = expectedVehicleToSunVectorNormalized.dot(Eigen::Vector3d::UnitX( ) );
+            double cosPanelInclinationNegativeXaxis = expectedVehicleToSunVectorNormalized.dot(- Eigen::Vector3d::UnitX() );
+            Eigen::Vector3d accelerationPositiveXaxisOrientedPanels = std::fabs(cosPanelInclinationPositiveXaxis)
+                  * radiationPressure / bodies.at( "Vehicle" )->getBodyMass() *  (areas[0] * (frontAbsorptivities[0] * (-expectedVehicleToSunVectorNormalized)
+                  + frontAbsorptivities[0] * (backEmissivities[0] * backNonLambertianCoefficients[0] - frontEmissivities[0] * frontNonLambertianCoefficients[0])/(frontEmissivities[0]
+                  + backEmissivities[0]) * Eigen::Vector3d::UnitX() - 2 * frontSpecularReflectivities[0] * cosPanelInclinationPositiveXaxis * Eigen::Vector3d::UnitX()
+                  + frontDiffuseReflectivities[0] * ((-expectedVehicleToSunVectorNormalized) - frontNonLambertianCoefficients[0] * Eigen::Vector3d::UnitX()))
+                  + areas[1] * (backAbsorptivities[1] * (-expectedVehicleToSunVectorNormalized) + backAbsorptivities[1] * (backEmissivities[1] * backNonLambertianCoefficients[1]
+                  - frontEmissivities[1] * frontNonLambertianCoefficients[1])/(frontEmissivities[1] + backEmissivities[1]) * (-Eigen::Vector3d::UnitX())
+                  - 2 * backSpecularReflectivities[1] * cosPanelInclinationNegativeXaxis * (-Eigen::Vector3d::UnitX())
+                  + backDiffuseReflectivities[1] * ((-expectedVehicleToSunVectorNormalized) + backNonLambertianCoefficients[1] * (-Eigen::Vector3d::UnitX()))));
+
+
+            // Calculated acceleration generated by the panels whose normals are along -X-axis.
+            Eigen::Vector3d accelerationNegativeXaxisOrientedPanels = std::fabs(cosPanelInclinationNegativeXaxis)
+                * radiationPressure / bodies.at( "Vehicle" )->getBodyMass() * (areas[1] * (frontAbsorptivities[1] * (-expectedVehicleToSunVectorNormalized)
+                + frontAbsorptivities[1] * (backEmissivities[1] * backNonLambertianCoefficients[1] - frontEmissivities[1] * frontNonLambertianCoefficients[1])/(frontEmissivities[1]
+                + backEmissivities[1]) * (-Eigen::Vector3d::UnitX()) - 2 * frontSpecularReflectivities[1] * cosPanelInclinationNegativeXaxis * (-Eigen::Vector3d::UnitX())
+                + frontDiffuseReflectivities[1] * ((-expectedVehicleToSunVectorNormalized) - frontNonLambertianCoefficients[1] * (-Eigen::Vector3d::UnitX())))
+                + areas[0] * (backAbsorptivities[0] * (-expectedVehicleToSunVectorNormalized) + backAbsorptivities[0] * (backEmissivities[0] * backNonLambertianCoefficients[0]
+                - frontEmissivities[0] * frontNonLambertianCoefficients[0])/(frontEmissivities[0] + backEmissivities[0]) * (Eigen::Vector3d::UnitX())
+                - 2 * backSpecularReflectivities[0] * cosPanelInclinationPositiveXaxis * (Eigen::Vector3d::UnitX())
+                + backDiffuseReflectivities[0] * ((-expectedVehicleToSunVectorNormalized) + backNonLambertianCoefficients[0] * (Eigen::Vector3d::UnitX()))));
+
+            // Calculated acceleration generated by the panels whose normals are along +Y-axis.
+            double cosPanelInclinationPositiveYaxis = expectedVehicleToSunVectorNormalized.dot(Eigen::Vector3d::UnitY() );
+            double cosPanelInclinationNegativeYaxis = expectedVehicleToSunVectorNormalized.dot(- Eigen::Vector3d::UnitY() );
+            Eigen::Vector3d accelerationPositiveYaxisOrientedPanels =  std::fabs(cosPanelInclinationPositiveYaxis)
+                    * radiationPressure / bodies.at( "Vehicle" )->getBodyMass() *  (areas[2] * (frontAbsorptivities[2] * (-expectedVehicleToSunVectorNormalized)
+                    + frontAbsorptivities[2] * (backEmissivities[2] * backNonLambertianCoefficients[2] - frontEmissivities[2] * frontNonLambertianCoefficients[2])/(frontEmissivities[2]
+                    + backEmissivities[2]) * Eigen::Vector3d::UnitY() - 2 * frontSpecularReflectivities[2] * cosPanelInclinationPositiveYaxis * Eigen::Vector3d::UnitY()
+                    + frontDiffuseReflectivities[2] * ((-expectedVehicleToSunVectorNormalized) - frontNonLambertianCoefficients[2] * Eigen::Vector3d::UnitY()))
+                    + areas[3] * (backAbsorptivities[3] * (-expectedVehicleToSunVectorNormalized) + backAbsorptivities[3] * (backEmissivities[3] * backNonLambertianCoefficients[3]
+                    - frontEmissivities[3] * frontNonLambertianCoefficients[3])/(frontEmissivities[3] + backEmissivities[3]) * (-Eigen::Vector3d::UnitY())
+                    - 2 * backSpecularReflectivities[3] * cosPanelInclinationNegativeYaxis * (-Eigen::Vector3d::UnitY())
+                    + backDiffuseReflectivities[3] * ((-expectedVehicleToSunVectorNormalized) + backNonLambertianCoefficients[3] * (-Eigen::Vector3d::UnitY()))));
+
+            // Calculated acceleration generated by the panels whose normals are along -Y-axis.
+
+            Eigen::Vector3d accelerationNegativeYaxisOrientedPanels =  std::fabs(cosPanelInclinationNegativeYaxis)
+                    * radiationPressure / bodies.at( "Vehicle" )->getBodyMass() * (areas[3] * (frontAbsorptivities[3] * (-expectedVehicleToSunVectorNormalized)
+                    + frontAbsorptivities[3] * (backEmissivities[3] * backNonLambertianCoefficients[3] - frontEmissivities[3] * frontNonLambertianCoefficients[3])/(frontEmissivities[3]
+                    + backEmissivities[3]) * (-Eigen::Vector3d::UnitY()) - 2 * frontSpecularReflectivities[3] * cosPanelInclinationNegativeYaxis * (-Eigen::Vector3d::UnitY())
+                    + frontDiffuseReflectivities[3] * ((-expectedVehicleToSunVectorNormalized) - frontNonLambertianCoefficients[3] * (-Eigen::Vector3d::UnitY())))
+                    + areas[2] * (backAbsorptivities[2] * (-expectedVehicleToSunVectorNormalized) + backAbsorptivities[2] * (backEmissivities[2] * backNonLambertianCoefficients[2]
+                    - frontEmissivities[2] * frontNonLambertianCoefficients[2])/(frontEmissivities[2] + backEmissivities[2]) * (Eigen::Vector3d::UnitY())
+                    - 2 * backSpecularReflectivities[2] * cosPanelInclinationPositiveYaxis * (Eigen::Vector3d::UnitY())
+                    + backDiffuseReflectivities[2] * ((-expectedVehicleToSunVectorNormalized) + backNonLambertianCoefficients[2] * (Eigen::Vector3d::UnitY()))));
+
+            // Calculated acceleration generated by the panels whose normals are along +Z-axis.
+            double cosPanelInclinationPositiveZaxis = expectedVehicleToSunVectorNormalized.dot(Eigen::Vector3d::UnitZ() );
+            double cosPanelInclinationNegativeZaxis = expectedVehicleToSunVectorNormalized.dot(- Eigen::Vector3d::UnitZ() );
+            Eigen::Vector3d accelerationPositiveZaxisOrientedPanels = std::fabs(cosPanelInclinationPositiveZaxis)
+                    * radiationPressure / bodies.at( "Vehicle" )->getBodyMass() *  (areas[4] * (frontAbsorptivities[4] * (-expectedVehicleToSunVectorNormalized)
+                    + frontAbsorptivities[4] * (backEmissivities[4] * backNonLambertianCoefficients[4] - frontEmissivities[4] * frontNonLambertianCoefficients[4])/(frontEmissivities[4]
+                    + backEmissivities[4]) * Eigen::Vector3d::UnitZ() - 2 * frontSpecularReflectivities[4] * cosPanelInclinationPositiveZaxis * Eigen::Vector3d::UnitZ()
+                    + frontDiffuseReflectivities[4] * ((-expectedVehicleToSunVectorNormalized) - frontNonLambertianCoefficients[4] * Eigen::Vector3d::UnitZ()))
+                    + areas[5] * (backAbsorptivities[5] * (-expectedVehicleToSunVectorNormalized) + backAbsorptivities[5] * (backEmissivities[5] * backNonLambertianCoefficients[5]
+                    - frontEmissivities[5] * frontNonLambertianCoefficients[5])/(frontEmissivities[5] + backEmissivities[5]) * (-Eigen::Vector3d::UnitZ())
+                    - 2 * backSpecularReflectivities[5] * cosPanelInclinationNegativeZaxis * (-Eigen::Vector3d::UnitZ())
+                    + backDiffuseReflectivities[5] * ((-expectedVehicleToSunVectorNormalized) + backNonLambertianCoefficients[5] * (-Eigen::Vector3d::UnitZ()))));
+
+            // Calculated acceleration generated by the panels whose normals are along -Z-axis.
+            Eigen::Vector3d accelerationNegativeZaxisOrientedPanels = std::fabs(cosPanelInclinationNegativeZaxis)
+                    * radiationPressure / bodies.at( "Vehicle" )->getBodyMass() * (areas[5] * (frontAbsorptivities[5] * (-expectedVehicleToSunVectorNormalized)
+                    + frontAbsorptivities[5] * (backEmissivities[5] * backNonLambertianCoefficients[5] - frontEmissivities[5] * frontNonLambertianCoefficients[5])/(frontEmissivities[5]
+                    + backEmissivities[5]) * (-Eigen::Vector3d::UnitZ()) - 2 * frontSpecularReflectivities[5] * cosPanelInclinationNegativeZaxis * (-Eigen::Vector3d::UnitZ())
+                    + frontDiffuseReflectivities[5] * ((-expectedVehicleToSunVectorNormalized) - frontNonLambertianCoefficients[5] * (-Eigen::Vector3d::UnitZ())))
+                    + areas[4] * (backAbsorptivities[4] * (-expectedVehicleToSunVectorNormalized) + backAbsorptivities[4] * (backEmissivities[4] * backNonLambertianCoefficients[4]
+                    - frontEmissivities[4] * frontNonLambertianCoefficients[4])/(frontEmissivities[4] + backEmissivities[4]) * (Eigen::Vector3d::UnitZ())
+                    - 2 * backSpecularReflectivities[4] * cosPanelInclinationPositiveZaxis * (Eigen::Vector3d::UnitZ())
+                    + backDiffuseReflectivities[4] * ((-expectedVehicleToSunVectorNormalized) + backNonLambertianCoefficients[4] * (Eigen::Vector3d::UnitZ()))));
+
+            // Equatorial orbit case: vehicle in circular orbit around the Sun with i = 0 deg.
+            if ( testCase == 0 ){
+
+                // At t = 0: Sun-Vehicle vector expected along +X-axis
+                // The acceleration is expected to be generated by the panels whose normals are along -X-axis only.
+                if ( i == 0 ){
+                    expectedAcceleration = accelerationNegativeXaxisOrientedPanels;
+                }
+
+                    // At t = period/4: Sun-Vehicle vector expected along +Y-axis
+                    // The acceleration is expected to be generated by the panels whose normals are along -Y-axis only.
+                else if ( i == 1 ){
+                    expectedAcceleration = accelerationNegativeYaxisOrientedPanels;
+                }
+
+                    // At t = period/2: Sun-Vehicle vector expected along -X-axis
+                    // The acceleration is expected to be generated by the panels whose normals are along +X-axis only.
+                else if ( i == 2 ){
+                    expectedAcceleration = accelerationPositiveXaxisOrientedPanels;
+                }
+
+                    // At t = 3 * period/4: Sun-Vehicle vector expected along -Y-axis
+                    // The acceleration is expected to be generated by the panels whose normals are along +Y-axis only.
+                else if ( i == 3 ){
+                    expectedAcceleration = accelerationPositiveYaxisOrientedPanels;
+                }
+            }
+
+
+            // Polar orbit case: vehicle in circular orbit around the Sun with i = 90 deg
+            if ( testCase == 1 ){
+
+                // At t = 0: Sun-Vehicle vector expected along +X-axis.
+                // The acceleration is expected to be generated by the panels whose normals are along -X-axis only.
+                if ( i == 0 ){
+                    expectedAcceleration = accelerationNegativeXaxisOrientedPanels;
+                }
+
+                    // At t = period/4: Sun-Vehicle vector expected along +Z-axis.
+                    // The acceleration is expected to be generated by the panels whose normals are along -Z-axis only.
+                else if ( i == 1 ){
+                    expectedAcceleration = accelerationNegativeZaxisOrientedPanels;
+                }
+
+                    // At t = period/2: Sun-Vehicle vector expected along -X-axis.
+                    // The acceleration is expected to be generated by the panels whose normals are along +X-axis only.
+                else if ( i == 2 ){
+                    expectedAcceleration = accelerationPositiveXaxisOrientedPanels;
+                }
+
+                    // At t = 3*period/4: Sun-Vehicle vector expected along -Z-axis.
+                    // The acceleration is expected to be generated by the panels whose normals are along +Z-axis only.
+                else if ( i == 3 ){
+                    expectedAcceleration = accelerationPositiveZaxisOrientedPanels;
+                }
+            }
+
+
+            // Circular orbit with arbitrary chosen inclination
+            if ( testCase == 2 ){
+
+                // At t = 0: Sun-Vehicle vector expected along +X-axis.
+                // The acceleration is expected to be generated by the panels whose normals are along -X-axis only.
+                if ( i == 0 ){
+                    expectedAcceleration = accelerationNegativeXaxisOrientedPanels;
+                }
+
+                    // At t = period/4: Sun-vehicle vector expected to have components along +Z and +Y axes.
+                    // The acceleration is expected to be generated by the panels whose normals are along -Y and -Z axes.
+                else if ( i == 1 ){
+                    expectedAcceleration = accelerationNegativeZaxisOrientedPanels + accelerationNegativeYaxisOrientedPanels;
+                }
+
+                    // At t = period/2: Sun-Vehicle vector expected along -X-axis.
+                    // The acceleration is expected to be generated by the panels whose normals are along +X-axis only.
+                else if ( i == 2 ){
+                    expectedAcceleration = accelerationPositiveXaxisOrientedPanels;
+                }
+
+                    // At t = period/4: Sun-vehicle vector expected to have components along -Z and -Y axes.
+                    // The acceleration is expected to be generated by the panels whose normals are along +Y and +Z axes.
+                else if ( i == 3 ){
+                    expectedAcceleration = accelerationPositiveZaxisOrientedPanels + accelerationPositiveYaxisOrientedPanels;
+                }
+
+            }
+
+
+            // Case with non-constant rotational model for the spacecraft.
+            if ( testCase == 3 )
+            {
+                Eigen::Quaterniond currentRotationToInertialFrame =
+                        bodies.at( "Vehicle" )->getRotationalEphemeris( )->getRotationToBaseFrame( testTimes.at( i ) );
+                Eigen::Vector3d expectedPanelNormalPositiveXaxis = currentRotationToInertialFrame * Eigen::Vector3d::UnitX();
+                Eigen::Vector3d expectedPanelNormalNegativeXaxis = currentRotationToInertialFrame * -Eigen::Vector3d::UnitX();
+
+
+                double cosPanelInclinationPositiveXaxis = expectedVehicleToSunVectorNormalized.dot(expectedPanelNormalPositiveXaxis );
+                double cosPanelInclinationNegativeXaxis = expectedVehicleToSunVectorNormalized.dot(expectedPanelNormalNegativeXaxis );
+
+                // Determine the normal of the panels that are actually generating a radiation pressure acceleration,
+                // depending on their current inertial orientation.
+                Eigen::Vector3d expectedFrontPanelNormal;
+                Eigen::Vector3d expectedBackPanelNormal;
+                double frontCosPanelInclination;
+                double backCosPanelInclination;
+                unsigned int id_front[2];
+                unsigned int id_back[2];
+                if (cosPanelInclinationPositiveXaxis > 0.){
+                    // The panels which were originally pointing in positive X have their front surface exposed towards the source
+                    id_front[0] = 0;
+                    id_front[1] = 1;
+                    id_back[0] = 2;
+                    id_back[1] = 3;
+                    frontCosPanelInclination = cosPanelInclinationPositiveXaxis;
+                    backCosPanelInclination = cosPanelInclinationNegativeXaxis;
+                    expectedFrontPanelNormal = expectedPanelNormalPositiveXaxis;
+                    expectedBackPanelNormal = expectedPanelNormalNegativeXaxis;
+                } else{
+                    // The panels which were originally pointing in negative X have their front surface exposed towards the source
+                    id_front[0] = 2;
+                    id_front[1] = 3;
+                    id_back[0] = 0;
+                    id_back[1] = 1;
+                    frontCosPanelInclination = cosPanelInclinationNegativeXaxis;
+                    backCosPanelInclination = cosPanelInclinationPositiveXaxis;
+                    expectedFrontPanelNormal = expectedPanelNormalNegativeXaxis;
+                    expectedBackPanelNormal = expectedPanelNormalPositiveXaxis;
+                }
+
+                // Calculate expected acceleration (same characteristics for the panels oriented along the -X and +X axes).
+                Eigen::Vector3d expectedFrontAcceleration = Eigen::Vector3d::Zero();
+                Eigen::Vector3d expectedBackAcceleration = Eigen::Vector3d::Zero();
+                for (unsigned int j=0; j < 2; j++){
+                    expectedFrontAcceleration += std::fabs(frontCosPanelInclination)
+                            * radiationPressure / bodies.at( "Vehicle" )->getBodyMass() * (areas[id_front[j]] * (frontAbsorptivities[id_front[j]]
+                            * (-expectedVehicleToSunVectorNormalized) + frontAbsorptivities[id_front[j]] * (backEmissivities[id_front[j]] * backNonLambertianCoefficients[id_front[j]]
+                            - frontEmissivities[id_front[j]] * frontNonLambertianCoefficients[id_front[j]])/(frontEmissivities[id_front[j]]
+                            + backEmissivities[id_front[j]]) * expectedFrontPanelNormal - 2 * frontSpecularReflectivities[id_front[j]] * frontCosPanelInclination * expectedFrontPanelNormal
+                            + frontDiffuseReflectivities[id_front[j]] * ((-expectedVehicleToSunVectorNormalized) - frontNonLambertianCoefficients[id_front[j]] * expectedFrontPanelNormal)));
+
+                    expectedBackAcceleration += std::fabs(backCosPanelInclination)
+                            * radiationPressure / bodies.at( "Vehicle" )->getBodyMass() * (areas[id_back[j]] * (backAbsorptivities[id_back[j]]
+                            * (-expectedVehicleToSunVectorNormalized) + backAbsorptivities[id_back[j]] * (backEmissivities[id_back[j]] * backNonLambertianCoefficients[id_back[j]]
+                            - frontEmissivities[id_back[j]] * frontNonLambertianCoefficients[id_back[j]])/(frontEmissivities[id_back[j]] + backEmissivities[id_back[j]])
+                            * expectedBackPanelNormal - 2 * backSpecularReflectivities[id_back[j]] * backCosPanelInclination * expectedBackPanelNormal
+                            + backDiffuseReflectivities[id_back[j]] * ((-expectedVehicleToSunVectorNormalized) + backNonLambertianCoefficients[id_back[j]] * expectedBackPanelNormal)));
+                }
+
+                expectedAcceleration = expectedFrontAcceleration + expectedBackAcceleration;
+            }
+
+            std::cout << testCase << " " << i << std::endl;
+            std::cout << calculatedAcceleration - expectedAcceleration << std::endl;
+            for( unsigned int k = 0; k < 3; k++ )
+            {
+                BOOST_CHECK_SMALL( std::fabs( calculatedAcceleration[k] - expectedAcceleration[k] ), std::fabs(expectedAcceleration.norm() * 1.0e-13) );
+            }
+        }
+    }
+}
 
 BOOST_AUTO_TEST_SUITE_END()
 

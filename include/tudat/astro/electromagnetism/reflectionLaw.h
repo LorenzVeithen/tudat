@@ -187,6 +187,128 @@ public:
     }
 };
 
+class SolarSailOpticalReflectionLaw : public ReflectionLaw
+{
+public:
+    /*!
+     * Constructor.
+     *
+     * @param frontAbsorptivity Sail front absorptivity (between 0 and 1)
+     * @param backAbsorptivity Sail back absorptivity (between 0 and 1)
+     * @param specularReflectivity Specular reflectivity (between 0 and 1)
+     * @param diffuseReflectivity Diffuse reflectivity (between 0 and 1)
+     * @param backNonLambertianCoefficient Non-Lambertian coefficient of the back of the sail (between 0 and 1)
+     * @param frontNonLambertianCoefficient Non-Lambertian coefficient of the front of the sail (between 0 and 1)
+     * @param frontEmissivity Emissitivity from the front of the sail (between 0 and 1)
+     * @param backEmissivity Emissitivity from the back of the sail (between 0 and 1)
+     */
+    explicit SolarSailOpticalReflectionLaw(
+            double frontAbsorptivity,
+            double backAbsorptivity,
+            double frontSpecularReflectivity,
+            double backSpecularReflectivity,
+            double frontDiffuseReflectivity,
+            double backDiffuseReflectivity,
+            double frontNonLambertianCoefficient,
+            double backNonLambertianCoefficient,
+            double frontEmissivity,
+            double backEmissivity) :
+            frontAbsorptivity_(frontAbsorptivity),
+            backAbsorptivity_(backAbsorptivity),
+            frontSpecularReflectivity_(frontSpecularReflectivity),
+            backSpecularReflectivity_(backSpecularReflectivity),
+            frontDiffuseReflectivity_(frontDiffuseReflectivity),
+            backDiffuseReflectivity_(backDiffuseReflectivity),
+            frontNonLambertianCoefficient_(frontNonLambertianCoefficient),
+            backNonLambertianCoefficient_(backNonLambertianCoefficient),
+            frontEmissivity_(frontEmissivity),
+            backEmissivity_(backEmissivity)
+    {
+        validateCoefficients();
+    }
+
+    double evaluateReflectedFraction(
+            const Eigen::Vector3d& surfaceNormal,
+            const Eigen::Vector3d& incomingDirection,
+            const Eigen::Vector3d& observerDirection) const override;
+
+    Eigen::Vector3d evaluateReactionVector(
+        const Eigen::Vector3d& surfaceNormal,
+        const Eigen::Vector3d& incomingDirection) const override;
+
+    Eigen::Matrix3d evaluateReactionVectorDerivativeWrtTargetPosition(
+        const Eigen::Vector3d& surfaceNormal,
+        const Eigen::Vector3d& incomingDirection,
+        const double cosineOfAngleBetweenVectors,
+        const Eigen::Vector3d& currentReactionVector,
+        const Eigen::Matrix3d& sourceUnitVectorPartial,
+        const Eigen::Matrix< double, 1, 3 >& cosineAnglePartial ) override;
+
+    double getFrontAbsorptivity() const
+    {
+        return frontAbsorptivity_;
+    }
+
+    double getBackAbsorptivity() const
+    {
+        return backAbsorptivity_;
+    }
+
+    double getFrontSpecularReflectivity() const
+    {
+        return frontSpecularReflectivity_;
+    }
+
+    double getBackSpecularReflectivity() const
+    {
+        return backSpecularReflectivity_;
+    }
+
+    double getFrontDiffuseReflectivity() const
+    {
+        return frontDiffuseReflectivity_;
+    }
+
+    double getBackDiffuseReflectivity() const
+    {
+        return backDiffuseReflectivity_;
+    }
+
+    double getBackNonLambertianCoefficient() const
+    {
+        return backNonLambertianCoefficient_;
+    }
+
+    double getFrontNonLambertianCoefficient() const
+    {
+        return frontNonLambertianCoefficient_;
+    }
+
+    double getBackEmissivity() const
+    {
+        return backEmissivity_;
+    }
+
+    double getFrontEmissivity() const
+    {
+        return frontEmissivity_;
+    }
+
+protected:
+    void validateCoefficients() const;
+
+    double frontAbsorptivity_;
+    double backAbsorptivity_;
+    double frontSpecularReflectivity_;
+    double backSpecularReflectivity_;
+    double frontDiffuseReflectivity_;
+    double backDiffuseReflectivity_;
+    double frontNonLambertianCoefficient_;
+    double backNonLambertianCoefficient_;
+    double frontEmissivity_;
+    double backEmissivity_;
+};
+
 /*!
  * Computed the mirrorlike reflection of an incoming vector on a surface. If the incoming vector is incident on the
  * backside of the surface, the zero vector is returned.
