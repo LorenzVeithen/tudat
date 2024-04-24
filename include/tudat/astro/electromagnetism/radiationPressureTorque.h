@@ -43,7 +43,7 @@ public:
         radiationPressureAcceleration_->getTargetModel( )->enableTorqueComputation( centerOfMassFunction );
     }
 
-    ~RadiationPressureTorque( ){ }
+    ~RadiationPressureTorque( ){ };
 
     /*!
      * Update class members.
