@@ -54,16 +54,16 @@ std::shared_ptr< electromagnetism::ReflectionLaw > createReflectionLaw(
             throw std::runtime_error( "Error when creating solar sail optical reflection law; settings are incompatible" );
         }
         reflectionLaw = std::make_shared< electromagnetism::SolarSailOpticalReflectionLaw >(
-                solarSailOpticalReflectionLawSettings->frontAbsorptivity_,
-                solarSailOpticalReflectionLawSettings->backAbsorptivity_,
-                solarSailOpticalReflectionLawSettings->frontSpecularReflectivity_,
-                solarSailOpticalReflectionLawSettings->backSpecularReflectivity_,
-                solarSailOpticalReflectionLawSettings->frontDiffuseReflectivity_,
-                solarSailOpticalReflectionLawSettings->backDiffuseReflectivity_,
-                solarSailOpticalReflectionLawSettings->frontNonLambertianCoefficient_,
-                solarSailOpticalReflectionLawSettings->backNonLambertianCoefficient_,
-                solarSailOpticalReflectionLawSettings->frontEmissivity_,
-                solarSailOpticalReflectionLawSettings->backEmissivity_);
+                solarSailOpticalReflectionLawSettings->frontAbsorptivity_(),
+                solarSailOpticalReflectionLawSettings->backAbsorptivity_(),
+                solarSailOpticalReflectionLawSettings->frontSpecularReflectivity_(),
+                solarSailOpticalReflectionLawSettings->backSpecularReflectivity_(),
+                solarSailOpticalReflectionLawSettings->frontDiffuseReflectivity_(),
+                solarSailOpticalReflectionLawSettings->backDiffuseReflectivity_(),
+                solarSailOpticalReflectionLawSettings->frontNonLambertianCoefficient_(),
+                solarSailOpticalReflectionLawSettings->backNonLambertianCoefficient_(),
+                solarSailOpticalReflectionLawSettings->frontEmissivity_(),
+                solarSailOpticalReflectionLawSettings->backEmissivity_());
         break;
     }
     default:

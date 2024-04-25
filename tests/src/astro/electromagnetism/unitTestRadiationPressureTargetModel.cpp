@@ -86,6 +86,7 @@ BOOST_AUTO_TEST_CASE( testCannonballRadiationPressureTargetModelZeroCoeff )
 //! Check if force is zero if all panels point away from incident radiation
 BOOST_AUTO_TEST_CASE( testPaneledRadiationPressureTargetModel_PointingAway )
 {
+
     const auto expectedForce = Eigen::Vector3d::Zero();
 
     const auto reflectionLaw = std::make_shared<SpecularDiffuseMixReflectionLaw>(0.2, 0.4, 0.4);

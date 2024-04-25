@@ -489,7 +489,7 @@ BOOST_AUTO_TEST_CASE( testRadiationPressureAcceleration_IsotropicPointSource_Pan
         std::vector< double > diffuseReflectivities;
         for (auto& panel : panels)
         {
-            areas.push_back(panel->getPanelArea());
+            areas.push_back(panel->getPanelArea()( ));
             panelSurfaceNormals.push_back(panel->getFrameFixedSurfaceNormal( )( ) );
             auto reflectionLaw = std::dynamic_pointer_cast<SpecularDiffuseMixReflectionLaw>(panel->getReflectionLaw());
             specularReflectivities.push_back(reflectionLaw->getSpecularReflectivity());
@@ -1646,7 +1646,7 @@ BOOST_AUTO_TEST_CASE( testRadiationPressureAcceleration_IsotropicPointSource_Pan
         std::vector< double > backNonLambertianCoefficients;
         for (auto& panel : panels)
         {
-            areas.push_back(panel->getPanelArea());
+            areas.push_back(panel->getPanelArea()( ));
             panelSurfaceNormals.push_back(panel->getFrameFixedSurfaceNormal( )( ) );
             auto reflectionLaw = std::dynamic_pointer_cast<SolarSailOpticalReflectionLaw>(panel->getReflectionLaw());
             frontAbsorptivities.push_back(reflectionLaw->getFrontAbsorptivity());

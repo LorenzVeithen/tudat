@@ -50,7 +50,9 @@ public:
      *
      * @param currentTime Current simulation time
      */
-    void updateMembers(double currentTime) override;
+    void updateMembers(double currentTime) override{
+
+    };
 
     void resetAccelerationModel( const std::shared_ptr< RadiationPressureAcceleration > radiationPressureAcceleration )
     {

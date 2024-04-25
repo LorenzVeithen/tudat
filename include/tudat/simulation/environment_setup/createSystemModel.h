@@ -74,53 +74,53 @@ public:
     FrameVariableBodyPanelGeometrySettings(
         const std::function< Eigen::Vector3d( ) >& surfaceNormalFunction,
         const std::function< Eigen::Vector3d( ) >& positionVectorFunction,
-        const double area,
+        const std::function<double()>& area,
         const double panelTemperature = 273.0,
         const std::string& frameOrientation = "" ):
-        BodyPanelGeometrySettings( frameOrientation ), 
-        surfaceNormalFunction_( surfaceNormalFunction ), 
-        positionVectorFunction_( positionVectorFunction ), 
-        area_( area ),
-        panelTemperature_(panelTemperature), 
-        bodyToTrack_( std::make_pair( "", 0 ) ){ }
+            BodyPanelGeometrySettings( frameOrientation ),
+            surfaceNormalFunction_( surfaceNormalFunction ),
+            positionVectorFunction_( positionVectorFunction ),
+            areaFunction_(area ),
+            panelTemperature_(panelTemperature),
+            bodyToTrack_( std::make_pair( "", 0 ) ){ }
 
     FrameVariableBodyPanelGeometrySettings(
         const std::string& bodyToTrack,
         const bool towardsTrackedBody,
         const std::function< Eigen::Vector3d( ) >& positionVectorFunction,
-        const double area,
+        const std::function<double()>& area,
         const double panelTemperature = 273.0,
         const std::string& frameOrientation = "" ):
-        BodyPanelGeometrySettings( frameOrientation ), 
-        surfaceNormalFunction_( nullptr ), 
-        positionVectorFunction_( positionVectorFunction ), 
-        area_( area ),
-        panelTemperature_(panelTemperature), 
-        bodyToTrack_( std::make_pair( bodyToTrack, towardsTrackedBody ) ){ }
+            BodyPanelGeometrySettings( frameOrientation ),
+            surfaceNormalFunction_( nullptr ),
+            positionVectorFunction_( positionVectorFunction ),
+            areaFunction_(area ),
+            panelTemperature_(panelTemperature),
+            bodyToTrack_( std::make_pair( bodyToTrack, towardsTrackedBody ) ){ }
 
     FrameVariableBodyPanelGeometrySettings(
         const std::function< Eigen::Vector3d( ) >& surfaceNormalFunction,
-        const double area,
+        const std::function<double()>& area,
         const std::string& frameOrientation = "" ):
-        BodyPanelGeometrySettings( frameOrientation ), 
-        surfaceNormalFunction_( surfaceNormalFunction ), 
-        area_( area ),
-        bodyToTrack_( std::make_pair( "", 0 ) ){ }
+            BodyPanelGeometrySettings( frameOrientation ),
+            surfaceNormalFunction_( surfaceNormalFunction ),
+            areaFunction_(area ),
+            bodyToTrack_( std::make_pair( "", 0 ) ){ }
 
     FrameVariableBodyPanelGeometrySettings(
         const std::string& bodyToTrack,
         const bool towardsTrackedBody,
-        const double area,
+        const std::function<double()>& area,
         const std::string& frameOrientation = "" ):
-        BodyPanelGeometrySettings( frameOrientation ), 
-        surfaceNormalFunction_( nullptr ), 
-        area_( area ),
-        bodyToTrack_( std::make_pair( bodyToTrack, towardsTrackedBody ) ){ }
+            BodyPanelGeometrySettings( frameOrientation ),
+            surfaceNormalFunction_( nullptr ),
+            areaFunction_(area ),
+            bodyToTrack_( std::make_pair( bodyToTrack, towardsTrackedBody ) ){ }
+
 
     std::function< Eigen::Vector3d( ) > surfaceNormalFunction_;
     std::function< Eigen::Vector3d( ) > positionVectorFunction_;
-
-    double area_;
+    std::function<double()> areaFunction_;
     double panelTemperature_;
 
     std::pair< std::string, bool > bodyToTrack_;
@@ -141,7 +141,7 @@ inline std::shared_ptr< BodyPanelGeometrySettings > frameFixedPanelGeometry(
 inline std::shared_ptr< BodyPanelGeometrySettings > timeVaryingPanelGeometry(
     const std::function< Eigen::Vector3d( ) >& surfaceNormalFunction,
     const std::function< Eigen::Vector3d( ) >& positionVectorFunction,
-    const double area,
+    const std::function<double()> area,
     const double panelTemperature = 273.0,
     const std::string& frameOrientation = "" )
 {
@@ -153,44 +153,13 @@ inline std::shared_ptr< BodyPanelGeometrySettings > bodyTrackingPanelGeometry(
     const std::string& bodyToTrack,
     const bool towardsTrackedBody,    
     const std::function< Eigen::Vector3d( ) >& positionVectorFunction,
-    const double area,
+    const std::function<double()> area,
     const double panelTemperature = 273.0,
     const std::string& frameOrientation = "" )
 {
     return std::make_shared< FrameVariableBodyPanelGeometrySettings >(
         bodyToTrack, towardsTrackedBody, positionVectorFunction, area, panelTemperature, frameOrientation );
 }
-
-
-
-inline std::shared_ptr< BodyPanelGeometrySettings > frameFixedPanelGeometry(
-    const Eigen::Vector3d& surfaceNormal,
-    const double area,
-    const std::string& frameOrientation = "" )
-{
-    return std::make_shared< FrameFixedBodyPanelGeometrySettings >(
-        surfaceNormal, area, frameOrientation );
-}
-
-inline std::shared_ptr< BodyPanelGeometrySettings > timeVaryingPanelGeometry(
-    const std::function< Eigen::Vector3d( ) >& surfaceNormalFunction,
-    const double area,
-    const std::string& frameOrientation = "" )
-{
-    return std::make_shared< FrameVariableBodyPanelGeometrySettings >(
-        surfaceNormalFunction, area, frameOrientation );
-}
-
-inline std::shared_ptr< BodyPanelGeometrySettings > bodyTrackingPanelGeometry(
-    const std::string& bodyToTrack,
-    const bool towardsTrackedBody,
-    const double area,
-    const std::string& frameOrientation = "" )
-{
-    return std::make_shared< FrameVariableBodyPanelGeometrySettings >(
-        bodyToTrack, towardsTrackedBody, area, frameOrientation );
-}
-
 
 class BodyPanelSettings
 {
@@ -269,8 +238,8 @@ inline std::shared_ptr< FullPanelledBodySettings > bodyWingPanelledGeometry(
               frameFixedPanelGeometry( -Eigen::Vector3d::UnitY( ), -Eigen::Vector3d::UnitY( )*width/2, length * height ),
               frameFixedPanelGeometry( Eigen::Vector3d::UnitZ( ), Eigen::Vector3d::UnitZ( )*length/2, length * width  ),
               frameFixedPanelGeometry( -Eigen::Vector3d::UnitZ( ), Eigen::Vector3d::UnitZ( )*length/2, length * width ),
-              bodyTrackingPanelGeometry( "Sun", true, [=]( ){ return -Eigen::Vector3d::UnitY( )*width/2; }, totalSolarArrayArea ),
-              bodyTrackingPanelGeometry( "Sun", false, [=]( ){ return Eigen::Vector3d::UnitY( )*width/2; }, totalSolarArrayArea ) } );
+              bodyTrackingPanelGeometry( "Sun", true, [=]( ){ return -Eigen::Vector3d::UnitY( )*width/2; }, [=]( ){ return totalSolarArrayArea; } ),
+              bodyTrackingPanelGeometry( "Sun", false, [=]( ){ return Eigen::Vector3d::UnitY( )*width/2; }, [=]( ){ return totalSolarArrayArea; } ) } );
     std::vector< std::shared_ptr< BodyPanelSettings > > panelSettings;
     for( unsigned int i = 0; i < 6; i++ )
     {

@@ -195,8 +195,10 @@ public:
      *
      * @param frontAbsorptivity Sail front absorptivity (between 0 and 1)
      * @param backAbsorptivity Sail back absorptivity (between 0 and 1)
-     * @param specularReflectivity Specular reflectivity (between 0 and 1)
-     * @param diffuseReflectivity Diffuse reflectivity (between 0 and 1)
+     * @param frontSpecularReflectivity Sail front specular reflectivity (between 0 and 1)
+     * @param backSpecularReflectivity Sail back specular reflectivity (between 0 and 1)
+     * @param frontDiffuseReflectivity Sail front diffuse reflectivity (between 0 and 1)
+     * @param backDiffuseReflectivity Sail back diffuse reflectivity (between 0 and 1)
      * @param backNonLambertianCoefficient Non-Lambertian coefficient of the back of the sail (between 0 and 1)
      * @param frontNonLambertianCoefficient Non-Lambertian coefficient of the front of the sail (between 0 and 1)
      * @param frontEmissivity Emissitivity from the front of the sail (between 0 and 1)

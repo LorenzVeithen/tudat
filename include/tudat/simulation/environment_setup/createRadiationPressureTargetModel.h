@@ -209,6 +209,29 @@ class SolarSailOpticalBodyPanelReflectionLawSettings: public BodyPanelReflection
 public:
 
     SolarSailOpticalBodyPanelReflectionLawSettings(
+            const std::function<double()>& frontAbsorptivity,
+            const std::function<double()>& backAbsorptivity,
+            const std::function<double()>& frontSpecularReflectivity,
+            const std::function<double()>& backSpecularReflectivity,
+            const std::function<double()>& frontDiffuseReflectivity,
+            const std::function<double()>& backDiffuseReflectivity,
+            const std::function<double()>& frontNonLambertianCoefficient,
+            const std::function<double()>& backNonLambertianCoefficient,
+            const std::function<double()>& frontEmissivity,
+            const std::function<double()>& backEmissivity):
+            BodyPanelReflectionLawSettings( solar_sail_optical_reflection_law ),
+            frontAbsorptivity_(frontAbsorptivity),
+            backAbsorptivity_(backAbsorptivity),
+            frontSpecularReflectivity_(frontSpecularReflectivity),
+            backSpecularReflectivity_(backSpecularReflectivity),
+            frontDiffuseReflectivity_(frontDiffuseReflectivity),
+            backDiffuseReflectivity_(backDiffuseReflectivity),
+            frontNonLambertianCoefficient_(frontNonLambertianCoefficient),
+            backNonLambertianCoefficient_(backNonLambertianCoefficient),
+            frontEmissivity_(frontEmissivity),
+            backEmissivity_(backEmissivity){}
+
+    SolarSailOpticalBodyPanelReflectionLawSettings(
             const double frontAbsorptivity,
             const double backAbsorptivity,
             const double frontSpecularReflectivity,
@@ -220,31 +243,29 @@ public:
             const double frontEmissivity,
             const double backEmissivity):
             BodyPanelReflectionLawSettings( solar_sail_optical_reflection_law ),
-            frontAbsorptivity_(frontAbsorptivity),
-            backAbsorptivity_(backAbsorptivity),
-            frontSpecularReflectivity_(frontSpecularReflectivity),
-            backSpecularReflectivity_(backSpecularReflectivity),
-            frontDiffuseReflectivity_(frontDiffuseReflectivity),
-            backDiffuseReflectivity_(backDiffuseReflectivity),
-            frontNonLambertianCoefficient_(frontNonLambertianCoefficient),
-            backNonLambertianCoefficient_(backNonLambertianCoefficient),
-            frontEmissivity_(frontEmissivity),
-            backEmissivity_(backEmissivity)
-
-    {}
+            frontAbsorptivity_([=](){return frontAbsorptivity;}),
+            backAbsorptivity_([=](){return backAbsorptivity;}),
+            frontSpecularReflectivity_([=](){return frontSpecularReflectivity;}),
+            backSpecularReflectivity_([=](){return backSpecularReflectivity;}),
+            frontDiffuseReflectivity_([=](){return frontDiffuseReflectivity;}),
+            backDiffuseReflectivity_([=](){return backDiffuseReflectivity;}),
+            frontNonLambertianCoefficient_([=](){return frontNonLambertianCoefficient;}),
+            backNonLambertianCoefficient_([=](){return backNonLambertianCoefficient;}),
+            frontEmissivity_([=](){return frontEmissivity;}),
+            backEmissivity_([=](){return backEmissivity;}){}
 
     ~SolarSailOpticalBodyPanelReflectionLawSettings( ){ }
 
-    double frontAbsorptivity_;
-    double backAbsorptivity_;
-    double frontSpecularReflectivity_;
-    double backSpecularReflectivity_;
-    double frontDiffuseReflectivity_;
-    double backDiffuseReflectivity_;
-    double frontNonLambertianCoefficient_;
-    double backNonLambertianCoefficient_;
-    double frontEmissivity_;
-    double backEmissivity_;
+    std::function<double()> frontAbsorptivity_;
+    std::function<double()> backAbsorptivity_;
+    std::function<double()> frontSpecularReflectivity_;
+    std::function<double()> backSpecularReflectivity_;
+    std::function<double()> frontDiffuseReflectivity_;
+    std::function<double()> backDiffuseReflectivity_;
+    std::function<double()> frontNonLambertianCoefficient_;
+    std::function<double()> backNonLambertianCoefficient_;
+    std::function<double()> frontEmissivity_;
+    std::function<double()> backEmissivity_;
 };
 
 inline std::shared_ptr< BodyPanelReflectionLawSettings > solarSailOpticalBodyPanelReflectionLawSettings(
@@ -258,6 +279,24 @@ inline std::shared_ptr< BodyPanelReflectionLawSettings > solarSailOpticalBodyPan
         const double backNonLambertianCoefficient,
         const double frontEmissivity,
         const double backEmissivity)
+{
+    return std::make_shared< SolarSailOpticalBodyPanelReflectionLawSettings>(
+            frontAbsorptivity, backAbsorptivity, frontSpecularReflectivity, backSpecularReflectivity,
+            frontDiffuseReflectivity, backDiffuseReflectivity, frontNonLambertianCoefficient,
+            backNonLambertianCoefficient, frontEmissivity, backEmissivity );
+}
+
+inline std::shared_ptr< BodyPanelReflectionLawSettings > solarSailOpticalBodyPanelTimeVaryingReflectionLawSettings(
+        const std::function<double()>& frontAbsorptivity,
+        const std::function<double()>& backAbsorptivity,
+        const std::function<double()>& frontSpecularReflectivity,
+        const std::function<double()>& backSpecularReflectivity,
+        const std::function<double()>& frontDiffuseReflectivity,
+        const std::function<double()>& backDiffuseReflectivity,
+        const std::function<double()>& frontNonLambertianCoefficient,
+        const std::function<double()>& backNonLambertianCoefficient,
+        const std::function<double()>& frontEmissivity,
+        const std::function<double()>& backEmissivity)
 {
     return std::make_shared< SolarSailOpticalBodyPanelReflectionLawSettings>(
             frontAbsorptivity, backAbsorptivity, frontSpecularReflectivity, backSpecularReflectivity,
@@ -292,7 +331,7 @@ std::shared_ptr< electromagnetism::ReflectionLaw > createReflectionLaw(
 //                   double diffuseReflectivity,
 //                   bool withInstantaneousReradiation,
 //                   const std::function<Eigen::Vector3d()>& surfaceNormalFunction) :
-//            area_(area),
+//            areaFunction_(area),
 //            specularReflectivity_(specularReflectivity),
 //            diffuseReflectivity_(diffuseReflectivity),
 //            withInstantaneousReradiation_(withInstantaneousReradiation),
@@ -334,7 +373,7 @@ std::shared_ptr< electromagnetism::ReflectionLaw > createReflectionLaw(
 //                   bool withInstantaneousReradiation,
 //                   const std::string& bodyToTrack,
 //                   const bool towardsTrackedBody = true) :
-//            area_(area),
+//            areaFunction_(area),
 //            specularReflectivity_(specularReflectivity),
 //            diffuseReflectivity_(diffuseReflectivity),
 //            withInstantaneousReradiation_(withInstantaneousReradiation),
@@ -343,7 +382,7 @@ std::shared_ptr< electromagnetism::ReflectionLaw > createReflectionLaw(
 //
 //    double getArea() const
 //    {
-//        return area_;
+//        return areaFunction_;
 //    }
 //
 //    const std::function<Eigen::Vector3d()>& getSurfaceNormalFunction() const
@@ -377,7 +416,7 @@ std::shared_ptr< electromagnetism::ReflectionLaw > createReflectionLaw(
 //    }
 //
 //private:
-//    double area_;
+//    double areaFunction_;
 //    double specularReflectivity_;
 //    double diffuseReflectivity_;
 //    bool withInstantaneousReradiation_;

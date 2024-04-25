@@ -77,7 +77,7 @@ std::pair< std::shared_ptr< system_models::VehicleExteriorPanel >, std::string >
         throw std::runtime_error( "Error when creating body exterior panel settings, no panel geometry settings provided" );
     }
 
-    double panelArea = TUDAT_NAN;
+    std::function< double( ) > panelArea = nullptr;
     double panelTemperature = TUDAT_NAN;
     std::function< Eigen::Vector3d( ) > localFrameSurfaceNormal = nullptr;
     std::function< Eigen::Vector3d( ) > localFramePositionVector = nullptr;
@@ -87,7 +87,7 @@ std::pair< std::shared_ptr< system_models::VehicleExteriorPanel >, std::string >
     {
         std::shared_ptr< FrameFixedBodyPanelGeometrySettings > fixedBodyPanelGeometrySettings =
             std::dynamic_pointer_cast< FrameFixedBodyPanelGeometrySettings >( panelSettings->panelGeometry_ );
-        panelArea = fixedBodyPanelGeometrySettings->area_;
+        panelArea = [=]( ){ return fixedBodyPanelGeometrySettings->area_; };
         panelTemperature = fixedBodyPanelGeometrySettings->panelTemperature_;
 
         localFrameSurfaceNormal = [=]( ){ return fixedBodyPanelGeometrySettings->surfaceNormal_; };
@@ -97,7 +97,7 @@ std::pair< std::shared_ptr< system_models::VehicleExteriorPanel >, std::string >
     {
         std::shared_ptr< FrameVariableBodyPanelGeometrySettings > variableBodyPanelGeometrySettings =
             std::dynamic_pointer_cast< FrameVariableBodyPanelGeometrySettings >( panelSettings->panelGeometry_ );
-        panelArea = variableBodyPanelGeometrySettings->area_;
+        panelArea = variableBodyPanelGeometrySettings->areaFunction_;
         panelTemperature = variableBodyPanelGeometrySettings->panelTemperature_;
         if( variableBodyPanelGeometrySettings->surfaceNormalFunction_ != nullptr )
         {

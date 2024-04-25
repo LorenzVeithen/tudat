@@ -157,7 +157,7 @@ public:
         }
 
     void enableTorqueComputation(
-        const std::function< Eigen::Vector3d( ) > centerOfMassFunction )
+        const std::function< Eigen::Vector3d( ) > centerOfMassFunction ) override
     {
         if( centerOfMassFunction == nullptr )
         {
@@ -265,10 +265,11 @@ public:
         panelForces_.resize( totalNumberOfPanels_ );
         surfacePanelCosines_.resize( totalNumberOfPanels_ );
         surfaceNormals_.resize( totalNumberOfPanels_ );
+        areas_.resize( totalNumberOfPanels_ );
     }
 
     void enableTorqueComputation(
-        const std::function< Eigen::Vector3d( ) > centerOfMassFunction )
+        const std::function< Eigen::Vector3d( ) > centerOfMassFunction ) override
     {
         if( centerOfMassFunction == nullptr )
         {
@@ -316,6 +317,11 @@ public:
         return surfacePanelCosines_;
     }
 
+    std::vector< double >& getAreas()
+    {
+        return areas_;
+    }
+
     std::vector< Eigen::Vector3d >& getPanelForces( )
     {
         return panelForces_;
@@ -350,6 +356,8 @@ private:
     std::vector< Eigen::Vector3d > panelCentroidMomentArms_;
 
     std::vector< double > surfacePanelCosines_;
+
+    std::vector< double > areas_;
 
     std::vector< Eigen::Vector3d > panelForces_;
 

@@ -62,7 +62,7 @@ void PaneledRadiationPressureTargetModel::updateRadiationPressureForcing(
             currentOrientation = segmentFixedToBodyFixedRotations_.at( segmentFixedPanelsIterator->first )( );
             if( computeTorques_ )
             {
-                throw std::runtime_error( "Torques not yet supported for moving vehicle parts." );
+                throw std::runtime_error( "Torques not yet supported for moving vehicle parts." ); // TODO: implement moving vehicle parts SRP torques
             }
         }
 
@@ -70,31 +70,22 @@ void PaneledRadiationPressureTargetModel::updateRadiationPressureForcing(
             ( i == 0 ) ? bodyFixedPanels_ : segmentFixedPanels_.at( segmentFixedPanelsIterator->first );
         for( unsigned int j = 0; j < currentPanels_.size( ); j++ )
         {
+
             surfaceNormals_[ counter ] = currentOrientation * currentPanels_.at( j )->getFrameFixedSurfaceNormal( )( );
             surfacePanelCosines_[ counter ] = (-sourceToTargetDirectionLocalFrame).dot(surfaceNormals_[ counter ]);
+            areas_[counter] = currentPanels_.at( j )->getPanelArea()();
+
             if( computeTorques_ )
             {
                 panelCentroidMomentArms_[ counter ] = currentOrientation * ( currentPanels_.at( j )->getFrameFixedPositionVector( )( ) - currentCenterOfMass );
             }
-            if (surfacePanelCosines_[ counter ] > 0)
+            panelForces_[ counter ] = radiationPressure_ * areas_[counter] * std::fabs(surfacePanelCosines_[ counter ]) *
+                currentPanels_.at( j )->getReflectionLaw()->evaluateReactionVector(surfaceNormals_[ counter ], sourceToTargetDirectionLocalFrame );
+            this->currentRadiationPressureForce_ += panelForces_[ counter ];
+            if( computeTorques_ )
             {
-                panelForces_[ counter ] = radiationPressure_ * currentPanels_.at( j )->getPanelArea() * surfacePanelCosines_[ counter ] *
-                    currentPanels_.at( j )->getReflectionLaw()->evaluateReactionVector(surfaceNormals_[ counter ], sourceToTargetDirectionLocalFrame );
-                this->currentRadiationPressureForce_ += panelForces_[ counter ];
-                if( computeTorques_ )
-                {
-                    panelTorques_[ counter ] = panelCentroidMomentArms_[ counter ].cross( panelForces_[ counter ] );
-                    this->currentRadiationPressureTorque_ += panelTorques_[ counter ];
-                }
-
-            }
-            else
-            {
-                panelForces_[ counter ].setZero( );
-                if( computeTorques_ )
-                {
-                    panelTorques_[ counter ].setZero( );
-                }
+                panelTorques_[ counter ] = panelCentroidMomentArms_[ counter ].cross( panelForces_[ counter ] );
+                this->currentRadiationPressureTorque_ += panelTorques_[ counter ];
             }
             counter++;
         }

@@ -1706,12 +1706,12 @@ BOOST_AUTO_TEST_CASE( test_radiationPressureTargetModelSetup_PaneledTarget )
                 expectedSpecularReflectivityPanel2, expectedDiffuseReflectivityPanel2, expectedWithInstantaneousReradiationPanel2 ) ),
         std::make_shared< BodyPanelSettings >(
             std::make_shared< FrameVariableBodyPanelGeometrySettings >(
-                "Sun", true, expectedAreaPanel2 ),
+                "Sun", true, [=](){return expectedAreaPanel2;} ),
             std::make_shared< SpecularDiffuseBodyPanelReflectionLawSettings >(
                 expectedSpecularReflectivityPanel2, expectedDiffuseReflectivityPanel2, expectedWithInstantaneousReradiationPanel2 ) ),
         std::make_shared< BodyPanelSettings >(
             std::make_shared< FrameVariableBodyPanelGeometrySettings >(
-                "Sun", false, expectedAreaPanel2 ),
+                "Sun", false, [=](){return expectedAreaPanel2;} ),
             std::make_shared< SpecularDiffuseBodyPanelReflectionLawSettings >(
                 expectedSpecularReflectivityPanel2, expectedDiffuseReflectivityPanel2, expectedWithInstantaneousReradiationPanel2 ) )
     };
@@ -1770,8 +1770,8 @@ BOOST_AUTO_TEST_CASE( test_radiationPressureTargetModelSetup_PaneledTarget )
     const auto panel2ReflectionLaw =
             std::dynamic_pointer_cast<electromagnetism::SpecularDiffuseMixReflectionLaw>(panel2->getReflectionLaw());
 
-    BOOST_CHECK_CLOSE(panel1->getPanelArea(), expectedAreaPanel1, 1e-10);
-    BOOST_CHECK_CLOSE(panel2->getPanelArea(), expectedAreaPanel2, 1e-10);
+    BOOST_CHECK_CLOSE(panel1->getPanelArea()(), expectedAreaPanel1, 1e-10);
+    BOOST_CHECK_CLOSE(panel2->getPanelArea()(), expectedAreaPanel2, 1e-10);
     BOOST_CHECK_CLOSE(panel1ReflectionLaw->getSpecularReflectivity(), expectedSpecularReflectivityPanel1, 1e-10);
     BOOST_CHECK_CLOSE(panel2ReflectionLaw->getSpecularReflectivity(), expectedSpecularReflectivityPanel2, 1e-10);
     BOOST_CHECK_CLOSE(panel1ReflectionLaw->getDiffuseReflectivity(), expectedDiffuseReflectivityPanel1, 1e-10);

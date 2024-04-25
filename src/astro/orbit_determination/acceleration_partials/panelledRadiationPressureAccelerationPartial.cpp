@@ -46,11 +46,11 @@ void PanelledRadiationPressurePartial::update( const double currentTime )
                 cosineOfPanelInclination = panelledTargetModel_->getSurfacePanelCosines( ).at( i );
 
                 currentPanelPartialContribution.setZero( );
-                if( cosineOfPanelInclination > 0.0 )
+                if( cosineOfPanelInclination > 0.0 )    // TODO: check why this condition is there and whether it should be removed
                 {
                     currentCosineAnglePartial_ = currentPanelNormal.transpose( ) * currentSourceUnitVectorPartial_;
 
-                    currentPanelArea = panelledTargetModel_->getBodyFixedPanels( ).at( i )->getPanelArea( );
+                    currentPanelArea = panelledTargetModel_->getAreas( ).at( i );
                     currentPanelReactionVector = panelledTargetModel_->getPanelForces( ).at( i ) / ( currentRadiationPressure * currentPanelArea );
 
                     currentPanelPartialContribution += panelledTargetModel_->getFullPanels( ).at( i )->getReflectionLaw( )->
