@@ -196,11 +196,11 @@ std::shared_ptr< electromagnetism::RadiationPressureTorque > createRadiationPres
 
     std::shared_ptr< AccelerationSettings > sphericalHarmonicAccelerationSettings =
         std::make_shared< AccelerationSettings >( basic_astrodynamics::radiation_pressure );
-
+    // LV TODO: Check that this change is indeed correct
     std::shared_ptr< electromagnetism::RadiationPressureAcceleration > radiationPressureAcceleration =
         std::dynamic_pointer_cast< electromagnetism::RadiationPressureAcceleration >(
             createRadiationPressureAccelerationModel(
-                bodyExertingTorque, bodyUndergoingTorque, nameOfBodyExertingTorque, nameOfBodyUndergoingTorque,
+                    bodyUndergoingTorque, bodyExertingTorque, nameOfBodyUndergoingTorque, nameOfBodyExertingTorque,
                 bodies ) );
 
     std::function< Eigen::Vector3d( ) > centerOfMassFunction = nullptr;

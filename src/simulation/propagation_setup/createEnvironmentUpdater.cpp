@@ -284,22 +284,37 @@ createRotationalEquationsOfMotionEnvironmentUpdaterSettings(
                     singleTorqueUpdateNeeds[ spherical_harmonic_gravity_field_update ].push_back(
                                 acceleratedBodyIterator->first );
                     break;
-                case radiation_pressure_torque:
-                    throw std::runtime_error( "Error, environment updates for radiation pressure torque not yet implemented" );
+                case radiation_pressure_torque: // LV TODO: Check that this is correct
+                    singleTorqueUpdateNeeds[ body_translational_state_update ].push_back(
+                            torqueModelIterator->first );
+                    singleTorqueUpdateNeeds[ body_translational_state_update ].push_back(
+                            acceleratedBodyIterator->first );
+                    singleTorqueUpdateNeeds[ body_rotational_state_update ].push_back(
+                            torqueModelIterator->first );
+                    singleTorqueUpdateNeeds[ body_rotational_state_update ].push_back(
+                            acceleratedBodyIterator->first );
+                    singleTorqueUpdateNeeds[ body_mass_update ].push_back(
+                            acceleratedBodyIterator->first );
+                    singleTorqueUpdateNeeds[ body_mass_distribution_update ].push_back(
+                            acceleratedBodyIterator->first );
+                    singleTorqueUpdateNeeds[ radiation_source_model_update ].push_back(
+                            torqueModelIterator->first );
+                    singleTorqueUpdateNeeds[ radiation_pressure_target_model_update ].push_back(
+                            acceleratedBodyIterator->first );
                     break;
                 case aerodynamic_torque:
                     singleTorqueUpdateNeeds[ body_translational_state_update ].push_back(
-                                torqueModelIterator->first );
+                            torqueModelIterator->first );
                     singleTorqueUpdateNeeds[ body_translational_state_update ].push_back(
-                                acceleratedBodyIterator->first );
+                            acceleratedBodyIterator->first );
                     singleTorqueUpdateNeeds[ body_rotational_state_update ].push_back(
-                                torqueModelIterator->first );
+                            torqueModelIterator->first );
                     singleTorqueUpdateNeeds[ vehicle_flight_conditions_update ].push_back(
-                                acceleratedBodyIterator->first );
+                            acceleratedBodyIterator->first );
                     singleTorqueUpdateNeeds[ body_mass_update ].push_back(
-                        acceleratedBodyIterator->first );
+                            acceleratedBodyIterator->first );
                     singleTorqueUpdateNeeds[ body_mass_distribution_update ].push_back(
-                        acceleratedBodyIterator->first );
+                            acceleratedBodyIterator->first );
                     break;
                 case inertial_torque:
                     break;

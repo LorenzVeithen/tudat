@@ -28,7 +28,7 @@ namespace simulation_setup
  *  settings of torque models that  require no information in addition to their type.
  *  Classes defining settings for torque models requiring additional information must be
  *  derived from this class.
- *  Bodies exerting and undergong torque are set externally from this class.
+ *  Bodies exerting and undergoing torque are set externally from this class.
  *  This class can be used for the easy setup of torque models
  *  (see createTorqueModels.h), but users may also chose to do so manually.
  *  (Derived) Class members are all public, for ease of access and modification.
@@ -125,6 +125,12 @@ inline std::shared_ptr< TorqueSettings > sphericalHarmonicGravitationalTorque(
         const int maximumDegree, const int maximumOrder)
 {
     return std::make_shared< SphericalHarmonicTorqueSettings >( maximumDegree, maximumOrder );
+}
+
+//LV TODO: check that this is necessary
+inline std::shared_ptr< TorqueSettings > radiationPressureTorque( )
+{
+    return std::make_shared< TorqueSettings >( basic_astrodynamics::radiation_pressure_torque );
 }
 
 inline std::shared_ptr< TorqueSettings > dissipativeTorque(

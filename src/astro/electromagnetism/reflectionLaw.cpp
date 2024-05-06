@@ -134,9 +134,14 @@ Eigen::Vector3d SolarSailOpticalReflectionLaw::evaluateReactionVector(const Eige
             exposedLambertianCoefficient = backNonLambertianCoefficient_;
         }
 
-
-        double EmissionFraction = (backEmissivity_ * backNonLambertianCoefficient_ - frontEmissivity_ * frontNonLambertianCoefficient_)
+        double EmissionFraction;
+        if ((frontEmissivity_ + backEmissivity_) < 1e-15){
+            EmissionFraction = 0;
+        }
+        else{
+            EmissionFraction = (backEmissivity_ * backNonLambertianCoefficient_ - frontEmissivity_ * frontNonLambertianCoefficient_)
                 /(frontEmissivity_ + backEmissivity_);
+        }
         auto reactionFromAbsorptionAndReradiation = absorptivity
                 * (incomingDirection + EmissionFraction * surfaceNormal);
         auto reactionFromSpecularReflection = -2 * specularReflectivity
