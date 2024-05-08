@@ -172,7 +172,7 @@ Eigen::Matrix3d SolarSailOpticalReflectionLaw::evaluateReactionVectorDerivativeW
         std::fabs(1 - sumOfCoeffsBack) >= 20 * std::numeric_limits<double>::epsilon())
         {
             std::cerr << "Warning, coefficients of optical solar sail reflection law, " <<
-                      "should sum to 1" << sumOfCoeffsFront << sumOfCoeffsBack << std::endl;
+                      "should sum to 1. Front: " << sumOfCoeffsFront << " Back: "<< sumOfCoeffsBack << std::endl;
         }else if (backEmissivity_> 1 || frontEmissivity_> 1){
             std::cerr << "Warning, the emissivity coefficients of the solar sail reflection law, " <<
                       "should have a value between 0 and 1" << std::endl;

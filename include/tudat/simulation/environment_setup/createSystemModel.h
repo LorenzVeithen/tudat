@@ -74,7 +74,7 @@ public:
     FrameVariableBodyPanelGeometrySettings(
         const std::function< Eigen::Vector3d( ) >& surfaceNormalFunction,
         const std::function< Eigen::Vector3d( ) >& positionVectorFunction,
-        const std::function<double()>& area,
+        const std::function<double( )>& area,
         const double panelTemperature = 273.0,
         const std::string& frameOrientation = "" ):
             BodyPanelGeometrySettings( frameOrientation ),
@@ -88,7 +88,7 @@ public:
         const std::string& bodyToTrack,
         const bool towardsTrackedBody,
         const std::function< Eigen::Vector3d( ) >& positionVectorFunction,
-        const std::function<double()>& area,
+        const std::function<double( )>& area,
         const double panelTemperature = 273.0,
         const std::string& frameOrientation = "" ):
             BodyPanelGeometrySettings( frameOrientation ),
@@ -100,7 +100,7 @@ public:
 
     FrameVariableBodyPanelGeometrySettings(
         const std::function< Eigen::Vector3d( ) >& surfaceNormalFunction,
-        const std::function<double()>& area,
+        const std::function<double( )>& area,
         const std::string& frameOrientation = "" ):
             BodyPanelGeometrySettings( frameOrientation ),
             surfaceNormalFunction_( surfaceNormalFunction ),
@@ -110,7 +110,7 @@ public:
     FrameVariableBodyPanelGeometrySettings(
         const std::string& bodyToTrack,
         const bool towardsTrackedBody,
-        const std::function<double()>& area,
+        const std::function<double( )>& area,
         const std::string& frameOrientation = "" ):
             BodyPanelGeometrySettings( frameOrientation ),
             surfaceNormalFunction_( nullptr ),
@@ -141,7 +141,7 @@ inline std::shared_ptr< BodyPanelGeometrySettings > frameFixedPanelGeometry(
 inline std::shared_ptr< BodyPanelGeometrySettings > timeVaryingPanelGeometry(
     const std::function< Eigen::Vector3d( ) >& surfaceNormalFunction,
     const std::function< Eigen::Vector3d( ) >& positionVectorFunction,
-    const std::function<double()> area,
+    const std::function<double()>& area,
     const double panelTemperature = 273.0,
     const std::string& frameOrientation = "" )
 {
@@ -153,7 +153,7 @@ inline std::shared_ptr< BodyPanelGeometrySettings > bodyTrackingPanelGeometry(
     const std::string& bodyToTrack,
     const bool towardsTrackedBody,    
     const std::function< Eigen::Vector3d( ) >& positionVectorFunction,
-    const std::function<double()> area,
+    const std::function<double()>& area,
     const double panelTemperature = 273.0,
     const std::string& frameOrientation = "" )
 {
