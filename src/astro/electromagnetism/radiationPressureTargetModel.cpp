@@ -89,10 +89,13 @@ void PaneledRadiationPressureTargetModel::updateRadiationPressureForcing(
             if( computeTorques_ )
             {
                 panelTorques_[ counter ] = panelCentroidMomentArms_[ counter ].cross( panelForces_[ counter ] );
+                //std::cout << "panel " << counter << " position: " << panelCentroidMomentArms_[ counter ] << std::endl;
                 this->currentRadiationPressureTorque_ += panelTorques_[ counter ];
             }
             counter++;
         }
+        //std::cout << "current solar radiation force: " << this->currentRadiationPressureForce_.norm() << std::endl;
+        //std::cout << "current solar radiation torque: " << this->currentRadiationPressureTorque_.norm() << std::endl;
         if( i > 0 )
         {
             segmentFixedPanelsIterator++;
